@@ -1,8 +1,9 @@
 // Polyfill Promise.try (ES2025) for older browsers — required by pdfjs-dist v5
-if (typeof Promise.try !== 'function') {
-  Promise.try = function <T>(fn: () => T | PromiseLike<T>): Promise<T> {
-    return new Promise<T>((resolve) => resolve(fn()));
-  };
+{
+  const P = Promise as unknown as Record<string, unknown>;
+  if (typeof P.try !== 'function') {
+    P.try = (fn: () => unknown) => new Promise((resolve) => resolve(fn()));
+  }
 }
 
 import { StrictMode } from 'react';
