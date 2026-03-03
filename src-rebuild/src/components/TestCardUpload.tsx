@@ -147,6 +147,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
           testPointCount: Math.max(merged.testPointCount, result.testPointCount),
           uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...result.uniqueManeuvers])],
           maneuversByPoint: { ...merged.maneuversByPoint, ...result.maneuversByPoint },
+          testNo: result.testNo || merged.testNo,
         };
       }
       setPdfResult(merged);
