@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, XCircle } from 'lucide-react';
 import type { Evaluations, TestPointData } from './types';
 import { createDefaultEvaluation, isEvaluationComplete } from './data';
 import { exportToPdf } from './exportPdf';
@@ -24,6 +24,7 @@ export default function App() {
   const [isEditingManeuvers, setIsEditingManeuvers] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [initialManeuversFromOCR, setInitialManeuversFromOCR] = useState<Record<number, string> | null>(null);
+  const [showAbortConfirm, setShowAbortConfirm] = useState(false);
 
   const toggleManeuver = (name: string) => {
     setSelectedManeuvers((prev) =>
@@ -95,6 +96,12 @@ export default function App() {
     });
   };
 
+  const handleAbortAndSave = () => {
+    handleFinish();
+    setShowAbortConfirm(false);
+    resetMission();
+  };
+
   const resetMission = () => {
     setStep(1);
     setFlightTestNumber('');
@@ -136,14 +143,24 @@ export default function App() {
           </div>
 
           {step === 2 && (
-            <button
-              type="button"
-              onClick={resetMission}
-              className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset Mission
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAbortConfirm(true)}
+                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+              >
+                <XCircle className="h-4 w-4" />
+                Abort &amp; Save
+              </button>
+              <button
+                type="button"
+                onClick={resetMission}
+                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Mission
+              </button>
+            </div>
           )}
         </div>
       </header>
@@ -201,6 +218,35 @@ export default function App() {
             onShowSummaryChange={setShowSummary}
             startTime={startTime}
           />
+        </div>
+      )}
+
+      {showAbortConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-tusas-border bg-tusas-surface p-6 shadow-2xl">
+            <h2 className="mb-2 text-lg font-semibold text-tusas-text">
+              Abort Mission?
+            </h2>
+            <p className="mb-6 text-sm text-tusas-muted">
+              This will save all collected data as PDF and end the current mission. Are you sure?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAbortConfirm(false)}
+                className="rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAbortAndSave}
+                className="rounded-lg border border-red-600 bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Abort &amp; Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
