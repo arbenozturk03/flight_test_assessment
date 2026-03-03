@@ -11,6 +11,7 @@
     "icons": "node scripts/generate-icon-png.mjs"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.575.0",
     "pdf-parse": "^2.4.5",
