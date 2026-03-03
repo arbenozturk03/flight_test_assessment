@@ -12,11 +12,13 @@ export type TestSummaryItem = { id: string; ftt: string; tp?: string };
 // Load the pdf.js worker into the main thread so pdf.js uses its
 // fake-worker path (no Web Worker). Dynamic import() prevents Rollup
 // from tree-shaking the module's globalThis.pdfjsWorker side effect.
-const _workerReady: Promise<void> = import(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _workerReady: Promise<void> = (import(
   /* @vite-ignore */ 'pdfjs-dist/build/pdf.worker.min.mjs'
-).then((mod) => {
-  if (typeof globalThis !== 'undefined' && !globalThis.pdfjsWorker) {
-    globalThis.pdfjsWorker = { WorkerMessageHandler: mod.WorkerMessageHandler };
+) as Promise<any>).then((mod: any) => {
+  const g = globalThis as any;
+  if (!g.pdfjsWorker) {
+    g.pdfjsWorker = { WorkerMessageHandler: mod.WorkerMessageHandler };
   }
 });
 
