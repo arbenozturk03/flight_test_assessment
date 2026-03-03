@@ -1,5 +1,5 @@
 const Busboy = require("busboy");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 // ---- Data ----
 
@@ -208,11 +208,13 @@ exports.handler = async (event) => {
     }
 
     const pdfBuffer = await extractFileFromMultipart(reqHeaders, bodyBuffer);
-    const data = await pdfParse(pdfBuffer);
-    const fullText = normalizeText(data.text);
+    const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+    await parser.load();
+    const rawText = await parser.getText();
+    const fullText = normalizeText(rawText);
 
-    const pages = data.text.includes("\f")
-      ? data.text.split("\f").map((t) => normalizeText(t))
+    const pages = rawText.includes("\f")
+      ? rawText.split("\f").map((t) => normalizeText(t))
       : [fullText];
 
     const matchedTexts = [];
