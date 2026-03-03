@@ -229,11 +229,19 @@ export async function parsePdfTestCardSummary(
   const buf = await pdfFile.arrayBuffer();
   let doc: pdfjsLib.PDFDocumentProxy;
   try {
-    doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    const task = pdfjsLib.getDocument({ data: buf });
+    doc = await Promise.race([
+      task.promise,
+      new Promise<never>((_resolve, reject) =>
+        setTimeout(() => {
+          task.destroy();
+          reject(new Error('Worker 10sn içinde yanıt vermedi'));
+        }, 10_000),
+      ),
+    ]);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[PDF] getDocument failed:', msg, err);
-    throw new Error('PDF dosyası açılamadı: ' + msg);
+    throw new Error('PDF: ' + msg);
   }
 
   const matchedPages = await findAllMatchingPages(doc);
