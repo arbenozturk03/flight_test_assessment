@@ -210,7 +210,8 @@ exports.handler = async (event) => {
     const pdfBuffer = await extractFileFromMultipart(reqHeaders, bodyBuffer);
     const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
     await parser.load();
-    const rawText = await parser.getText();
+    const result = await parser.getText();
+    const rawText = result.text || "";
     const fullText = normalizeText(rawText);
 
     const pages = rawText.includes("\f")
