@@ -133,7 +133,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
       for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/parse-test-card', {
+        const res = await fetch('/.netlify/functions/parse-test-card', {
           method: 'POST',
           body: formData,
         });
