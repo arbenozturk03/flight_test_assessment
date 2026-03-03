@@ -245,8 +245,10 @@ export async function parsePdfTestCardSummary(
   let doc: pdfjsLib.PDFDocumentProxy;
   try {
     doc = await pdfjsLib.getDocument({ data: buf }).promise;
-  } catch {
-    throw new Error('PDF dosyası açılamadı.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[PDF] getDocument failed:', msg, err);
+    throw new Error('PDF dosyası açılamadı: ' + msg);
   }
 
   const matchedPages = await findAllMatchingPages(doc);
