@@ -6,15 +6,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { matchManeuverName } from './parseTestCardOCR';
 import { ABBR_TO_MANEUVER } from '../data';
-import { version as pdfjsVersion } from 'pdfjs-dist/package.json';
 
 export type TestSummaryItem = { id: string; ftt: string; tp?: string };
 
-// Use CDN-hosted worker — avoids all bundling, tree-shaking, module-worker,
-// and Service Worker interception issues. pdf.js has built-in CDN support:
-// it wraps cross-origin URLs in a blob with `await import(url)`.
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.mjs`;
+// Worker file is copied to public/ at build time (see prebuild script).
+// Same-origin, no CDN issues, properly cached by Service Worker.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 // ---------------------------------------------------------------------------
 // Normalization
