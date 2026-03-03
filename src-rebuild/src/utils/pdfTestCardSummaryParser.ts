@@ -3,7 +3,6 @@
  * Extracts ID + FTT (+ optional TP#) from the "TEST CARD SUMMARY" table in a PDF.
  * Does not assume a fixed page number; scores all pages to find the best match.
  */
-// @ts-expect-error -- Vite ?raw returns a string; no declarations needed
 import workerCode from 'pdfjs-dist/build/pdf.worker.min.mjs?raw';
 import * as pdfjsLib from 'pdfjs-dist';
 import { matchManeuverName } from './parseTestCardOCR';
