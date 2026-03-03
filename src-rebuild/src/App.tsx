@@ -146,19 +146,19 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowAbortConfirm(true)}
-                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
-              >
-                <XCircle className="h-4 w-4" />
-                Abort &amp; Save
-              </button>
-              <button
-                type="button"
                 onClick={resetMission}
                 className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
               >
                 <RotateCcw className="h-4 w-4" />
                 Reset Mission
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAbortConfirm(true)}
+                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+              >
+                <XCircle className="h-4 w-4" />
+                Abort &amp; Save
               </button>
             </div>
           )}

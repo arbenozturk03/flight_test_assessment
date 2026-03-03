@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Check, CircleX, ClipboardList, Download, Pencil } from 'lucide-react';
+import { Check, ChevronDown, CircleX, ClipboardList, Copy, Download, Pencil } from 'lucide-react';
 import type { Evaluation, Evaluations, TestPointData } from '../types';
 import {
   HANDLING_CRITERIA,
@@ -116,6 +116,19 @@ export default function TestEvaluation({
   const selectManeuver = (maneuver: string) => {
     emitUpdate({ maneuver });
   };
+
+  const applyFrom = (sourceTp: number) => {
+    const source = evaluations[sourceTp];
+    if (!source) return;
+    emitUpdate({
+      evaluation: { ...source.evaluation },
+      comments: { ...source.comments },
+      generalComment: source.generalComment,
+      cancelled: false,
+    });
+  };
+
+  const completedOtherTPs = completed.filter((tp) => tp !== currentTestPoint);
 
   const cancelTestPoint = () => {
     emitUpdate({ cancelled: true });
@@ -292,6 +305,35 @@ export default function TestEvaluation({
                 ))}
               </div>
             </section>
+
+            {/* Apply from previous TP */}
+            {currentManeuver && !isCancelled && completedOtherTPs.length > 0 && (
+              <section className="flex items-center gap-3 rounded-lg border border-tusas-border bg-tusas-surface px-4 py-3">
+                <Copy className="h-4 w-4 shrink-0 text-tusas-muted" />
+                <label className="text-sm font-medium text-tusas-muted whitespace-nowrap">
+                  Apply Full Assessment From
+                </label>
+                <div className="relative">
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const tp = Number(e.target.value);
+                      if (tp) applyFrom(tp);
+                      e.target.value = '';
+                    }}
+                    className="h-9 appearance-none rounded-lg border border-tusas-border bg-tusas-bg pl-3 pr-8 py-1 text-sm text-tusas-text outline-none transition-colors focus:border-tusas-blue"
+                  >
+                    <option value="" disabled>Select Test Point</option>
+                    {completedOtherTPs.map((tp) => (
+                      <option key={tp} value={tp}>
+                        TP {tp}{evaluations[tp]?.maneuver ? ` — ${getManeuverAbbr(evaluations[tp].maneuver!)}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-tusas-muted" />
+                </div>
+              </section>
+            )}
 
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
