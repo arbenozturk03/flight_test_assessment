@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <!-- Üst: TAI logosu (T sembolü) -->
+  <g transform="translate(256 200) scale(3.2) translate(-198,-63)">
+    <polyline points="189.8,55.4 219.5,34.6 207.9,68.8 204.7,78.8 200.5,90.2 188.6,124.3" fill="#EC1C24"/>
+    <polyline points="187.8,41.9 153.8,30.1 188.1,19.2 198.1,16 209.7,12.6 244.1,2.1" fill="#2E3191"/>
+  </g>
+  <!-- Alt: FTA - logonun altında -->
+  <text x="256" y="475" text-anchor="middle" fill="#e5e5e5" font-family="system-ui, -apple-system, sans-serif" font-size="96" font-weight="700"><tspan>FTA</tspan></text>
+</svg>
