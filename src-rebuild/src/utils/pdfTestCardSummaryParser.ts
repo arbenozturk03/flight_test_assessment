@@ -3,56 +3,15 @@
  * Extracts ID + FTT (+ optional TP#) from the "TEST CARD SUMMARY" table in a PDF.
  * Does not assume a fixed page number; scores all pages to find the best match.
  */
+// Import worker module directly into the main thread. This sets
+// globalThis.pdfjsWorker which pdf.js detects automatically, bypassing
+// Web Worker creation entirely (Chrome module-worker bug workaround).
+import 'pdfjs-dist/build/pdf.worker.min.mjs';
 import * as pdfjsLib from 'pdfjs-dist';
-import PdfJsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker&inline';
 import { matchManeuverName } from './parseTestCardOCR';
 import { ABBR_TO_MANEUVER } from '../data';
 
 export type TestSummaryItem = { id: string; ftt: string; tp?: string };
-
-// ---------------------------------------------------------------------------
-// Worker setup — ?worker&inline makes Vite bundle the worker and create a
-// Blob URL at runtime. This bypasses Service Worker interception and Chrome
-// module-worker initialisation issues that hang when DevTools is closed.
-// ---------------------------------------------------------------------------
-if (typeof window !== 'undefined') {
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerPort = new PdfJsWorker();
-  } catch {
-    // blob worker failed; pdf.js will fall back to main thread
-  }
-}
-
-const DOCUMENT_LOAD_TIMEOUT_MS = 15_000;
-
-async function loadDocument(
-  data: ArrayBuffer,
-): Promise<pdfjsLib.PDFDocumentProxy> {
-  const task = pdfjsLib.getDocument({ data });
-  const doc = await Promise.race([
-    task.promise,
-    new Promise<never>((_resolve, reject) =>
-      setTimeout(() => {
-        task.destroy();
-        reject(new Error('timeout'));
-      }, DOCUMENT_LOAD_TIMEOUT_MS),
-    ),
-  ]);
-  return doc;
-}
-
-async function loadDocumentWithFallback(
-  data: ArrayBuffer,
-): Promise<pdfjsLib.PDFDocumentProxy> {
-  try {
-    return await loadDocument(data);
-  } catch {
-    // Worker timed out or failed — retry without worker (main thread)
-    pdfjsLib.GlobalWorkerOptions.workerPort = null;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-    return await loadDocument(data);
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Normalization
@@ -229,7 +188,7 @@ export async function renderPdfPagesAsImages(
   scale = 2.0,
 ): Promise<File[]> {
   const buf = await pdfFile.arrayBuffer();
-  const doc = await loadDocumentWithFallback(buf);
+  const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   const n = Math.min(doc.numPages, maxPages);
   const files: File[] = [];
 
@@ -270,7 +229,7 @@ export async function parsePdfTestCardSummary(
   const buf = await pdfFile.arrayBuffer();
   let doc: pdfjsLib.PDFDocumentProxy;
   try {
-    doc = await loadDocumentWithFallback(buf);
+    doc = await pdfjsLib.getDocument({ data: buf }).promise;
   } catch {
     throw new Error('PDF dosyası açılamadı.');
   }
