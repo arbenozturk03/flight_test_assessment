@@ -1,8 +1,12 @@
 import { useState, useRef } from 'react';
-import { Upload, ImageIcon, Loader2, X, Plus } from 'lucide-react';
+import { Upload, ImageIcon, Loader2, X, FileText } from 'lucide-react';
 import { createWorker, PSM } from 'tesseract.js';
 import { MANEUVER_LIST, ABBR_TO_MANEUVER } from '../data';
 import { parseTestCardFromWords, type OCRWord, type ParsedTestCard } from '../utils/parseTestCardOCR';
+import {
+  parsePdfTestCardSummary,
+  type PdfTestCardExtractResult,
+} from '../utils/pdfTestCardSummaryParser';
 
 export interface TestCardExtractResult {
   testPointCount: number;
@@ -27,9 +31,27 @@ interface TestCardUploadProps {
 
 let nextId = 0;
 
+function mergeExtractResults(
+  a: TestCardExtractResult,
+  b: PdfTestCardExtractResult | null,
+): TestCardExtractResult {
+  if (!b || (b.testPointCount === 0 && b.uniqueManeuvers.length === 0))
+    return a;
+  return {
+    testPointCount: Math.max(a.testPointCount, b.testPointCount),
+    uniqueManeuvers: [...new Set([...a.uniqueManeuvers, ...b.uniqueManeuvers])],
+    maneuversByPoint: { ...a.maneuversByPoint, ...b.maneuversByPoint },
+  };
+}
+
 export default function TestCardUpload({ onExtract, disabled }: TestCardUploadProps) {
   const [pages, setPages] = useState<UploadedPage[]>([]);
+  const [pdfResult, setPdfResult] = useState<PdfTestCardExtractResult | null>(null);
+  const [pdfProcessing, setPdfProcessing] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pagesRef = useRef<UploadedPage[]>([]);
+  pagesRef.current = pages;
 
   const updatePage = (id: number, patch: Partial<UploadedPage>) =>
     setPages((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -71,7 +93,10 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
     }
   };
 
-  const combineAndEmit = (allPages: UploadedPage[]) => {
+  const combineAndEmit = (
+    allPages: UploadedPage[],
+    pdfOverride?: PdfTestCardExtractResult | null,
+  ) => {
     let testPointCount = 0;
     const maneuversByPoint: Record<number, string> = {};
     const seenManeuvers = new Set<string>();
@@ -91,7 +116,42 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
       }
     }
 
-    onExtract({ testPointCount, uniqueManeuvers, maneuversByPoint });
+    const fromImages: TestCardExtractResult = {
+      testPointCount,
+      uniqueManeuvers,
+      maneuversByPoint,
+    };
+    const pdf = pdfOverride !== undefined ? pdfOverride : pdfResult;
+    onExtract(mergeExtractResults(fromImages, pdf));
+  };
+
+  const processPdfs = async (files: File[]) => {
+    setPdfProcessing(true);
+    setPdfError(null);
+    try {
+      let merged: PdfTestCardExtractResult = {
+        testPointCount: 0,
+        uniqueManeuvers: [],
+        maneuversByPoint: {},
+      };
+      for (const file of files) {
+        const result = await parsePdfTestCardSummary(file, MANEUVER_LIST);
+        merged = {
+          testPointCount: Math.max(merged.testPointCount, result.testPointCount),
+          uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...result.uniqueManeuvers])],
+          maneuversByPoint: { ...merged.maneuversByPoint, ...result.maneuversByPoint },
+        };
+      }
+      setPdfResult(merged);
+      setPdfProcessing(false);
+      onExtract(merged);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'PDF işlenirken hata oluştu';
+      console.error('[PDF]', err);
+      setPdfError(msg);
+      setPdfResult(null);
+      setPdfProcessing(false);
+    }
   };
 
   const processFiles = async (files: File[]) => {
@@ -110,38 +170,36 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
       await runOCR(page);
     }
 
-    setPages((latest) => {
-      combineAndEmit(latest);
-      return latest;
-    });
+    setTimeout(() => combineAndEmit(pagesRef.current), 0);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
-    const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
-    if (files.length === 0) return;
-    processFiles(files);
+    const imageFiles = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+    const pdfFiles = Array.from(fileList).filter((f) => f.type === 'application/pdf');
+    if (imageFiles.length > 0) processFiles(imageFiles);
+    if (pdfFiles.length > 0) processPdfs(pdfFiles);
     e.target.value = '';
   };
 
   const removePage = (id: number) => {
-    setPages((prev) => {
-      const page = prev.find((p) => p.id === id);
-      if (page) URL.revokeObjectURL(page.previewUrl);
-      const remaining = prev.filter((p) => p.id !== id);
-      if (remaining.length > 0) {
-        combineAndEmit(remaining);
-      } else {
-        onExtract({ testPointCount: 0, uniqueManeuvers: [], maneuversByPoint: {} });
-      }
-      return remaining;
-    });
+    const page = pages.find((p) => p.id === id);
+    if (page) URL.revokeObjectURL(page.previewUrl);
+    const remaining = pages.filter((p) => p.id !== id);
+    setPages(remaining);
+    if (remaining.length > 0) {
+      setTimeout(() => combineAndEmit(remaining), 0);
+    } else {
+      onExtract({ testPointCount: 0, uniqueManeuvers: [], maneuversByPoint: {} });
+    }
   };
 
   const clearAll = () => {
     for (const p of pages) URL.revokeObjectURL(p.previewUrl);
     setPages([]);
+    setPdfResult(null);
+    setPdfError(null);
     onExtract({ testPointCount: 0, uniqueManeuvers: [], maneuversByPoint: {} });
   };
 
@@ -154,17 +212,17 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
         Upload test card pages
       </h3>
       <p className="mb-3 text-xs text-tusas-muted">
-        Upload one or more test card pages (photos or screenshots). The app reads the # and FTT
+        Upload test card pages (photos, screenshots) or a PDF. The app reads the # and FTT
         columns to set total test points and pre-select maneuvers.
       </p>
 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/jpg"
+        accept="image/png,image/jpeg,image/webp,image/jpg,application/pdf"
         onChange={handleFileChange}
         className="hidden"
-        disabled={disabled || isProcessing}
+        disabled={disabled || isProcessing || pdfProcessing}
         multiple
       />
 
@@ -176,12 +234,13 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
           className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-tusas-border bg-tusas-bg text-tusas-muted transition-colors hover:border-tusas-blue hover:text-tusas-text disabled:opacity-50"
         >
           <Upload className="h-5 w-5" />
-          Choose images
+          Choose images or PDF
         </button>
       )}
 
-      {pages.length > 0 && (
+      {(pages.length > 0 || pdfResult || pdfProcessing || pdfError) && (
         <div className="space-y-3">
+          {pages.length > 0 && (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {pages.map((page) => (
               <div
@@ -225,39 +284,56 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
               </div>
             ))}
           </div>
-
-          {doneCount > 0 && !isProcessing && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-green-500">
-                {doneCount} page{doneCount !== 1 ? 's' : ''} read. Form pre-filled below.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled}
-                  className="flex items-center gap-1 rounded-md border border-tusas-border px-3 py-1.5 text-xs text-tusas-muted hover:text-tusas-text"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add more pages
-                </button>
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="rounded-md border border-tusas-border px-3 py-1.5 text-xs text-tusas-muted hover:text-red-400"
-                >
-                  Clear all
-                </button>
+          )}
+          {pdfResult && pages.length === 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-tusas-border bg-tusas-bg px-4 py-3">
+              <FileText className="h-5 w-5 shrink-0 text-tusas-muted" />
+              <div className="text-xs">
+                {pdfResult.testPointCount > 0 ? (
+                  <span className="text-green-500">
+                    {pdfResult.testPointCount} test points, {pdfResult.uniqueManeuvers.length} maneuvers
+                  </span>
+                ) : (
+                  <span className="text-tusas-muted">Bulunamadı</span>
+                )}
               </div>
             </div>
           )}
 
-          {isProcessing && (
+          {(doneCount > 0 || pdfResult) && !isProcessing && !pdfProcessing && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-green-500">
+                {doneCount > 0 && `${doneCount} page${doneCount !== 1 ? 's' : ''} read. `}
+                {pdfResult && pdfResult.testPointCount > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5" />
+                    PDF: {pdfResult.testPointCount} test points, {pdfResult.uniqueManeuvers.length} maneuvers.
+                  </span>
+                )}
+                {(doneCount > 0 || (pdfResult && pdfResult.testPointCount > 0)) && ' Form pre-filled below.'}
+              </p>
+              <button
+                type="button"
+                onClick={clearAll}
+                className="rounded-md border border-tusas-border px-3 py-1.5 text-xs text-tusas-muted hover:text-red-400"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
+          {(isProcessing || pdfProcessing) && (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-tusas-blue" />
               <span className="text-xs text-tusas-muted">
-                Processing {pages.filter((p) => p.status === 'processing').length > 0 ? 'page' : 'pages'}…
+                {pdfProcessing ? 'Reading PDF…' : `Processing ${pages.filter((p) => p.status === 'processing').length > 0 ? 'page' : 'pages'}…`}
               </span>
+            </div>
+          )}
+
+          {pdfError && (
+            <div className="rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-3 text-xs text-red-400">
+              {pdfError}
             </div>
           )}
         </div>
