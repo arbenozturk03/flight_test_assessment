@@ -5,12 +5,6 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: '/',
-  optimizeDeps: {
-    include: ['pdfjs-dist/build/pdf.worker.min.mjs'],
-  },
-  ssr: {
-    noExternal: ['pdfjs-dist'],
-  },
   plugins: [
     react(),
     tailwindcss(),

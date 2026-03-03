@@ -3,24 +3,18 @@
  * Extracts ID + FTT (+ optional TP#) from the "TEST CARD SUMMARY" table in a PDF.
  * Does not assume a fixed page number; scores all pages to find the best match.
  */
+// @ts-expect-error -- Vite ?raw returns a string; no declarations needed
+import workerCode from 'pdfjs-dist/build/pdf.worker.min.mjs?raw';
 import * as pdfjsLib from 'pdfjs-dist';
 import { matchManeuverName } from './parseTestCardOCR';
 import { ABBR_TO_MANEUVER } from '../data';
 
 export type TestSummaryItem = { id: string; ftt: string; tp?: string };
 
-// Load the pdf.js worker into the main thread so pdf.js uses its
-// fake-worker path (no Web Worker). Dynamic import() prevents Rollup
-// from tree-shaking the module's globalThis.pdfjsWorker side effect.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _workerReady: Promise<void> = (import(
-  /* @vite-ignore */ 'pdfjs-dist/build/pdf.worker.min.mjs'
-) as Promise<any>).then((mod: any) => {
-  const g = globalThis as any;
-  if (!g.pdfjsWorker) {
-    g.pdfjsWorker = { WorkerMessageHandler: mod.WorkerMessageHandler };
-  }
-});
+// Execute the pdf.js worker code directly on the main thread. This sets
+// globalThis.pdfjsWorker which pdf.js detects, using its fake-worker path.
+// No Web Worker, no dynamic import, no network request — works everywhere.
+new Function(workerCode as string)();
 
 // ---------------------------------------------------------------------------
 // Normalization
@@ -196,7 +190,6 @@ export async function renderPdfPagesAsImages(
   maxPages = 10,
   scale = 2.0,
 ): Promise<File[]> {
-  await _workerReady;
   const buf = await pdfFile.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   const n = Math.min(doc.numPages, maxPages);
@@ -230,8 +223,6 @@ export async function parsePdfTestCardSummary(
   pdfFile: File,
   maneuverList: readonly string[],
 ): Promise<PdfTestCardExtractResult> {
-  await _workerReady;
-
   const empty: PdfTestCardExtractResult = {
     testPointCount: 0,
     uniqueManeuvers: [],
