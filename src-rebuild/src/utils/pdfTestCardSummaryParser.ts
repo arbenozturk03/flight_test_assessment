@@ -11,10 +11,20 @@ import { ABBR_TO_MANEUVER } from '../data';
 
 export type TestSummaryItem = { id: string; ftt: string; tp?: string };
 
-// Execute the pdf.js worker code directly on the main thread. This sets
-// globalThis.pdfjsWorker which pdf.js detects, using its fake-worker path.
-// No Web Worker, no dynamic import, no network request — works everywhere.
-new Function(workerCode as string)();
+// Lazily execute the pdf.js worker code on the main thread via <script>.
+// This sets globalThis.pdfjsWorker which pdf.js detects → fake-worker path.
+let _workerInitialised = false;
+function ensureWorkerLoaded() {
+  if (_workerInitialised) return;
+  _workerInitialised = true;
+  const code = (workerCode as string)
+    .replace(/import\.meta/g, '({url:document.baseURI})')
+    .replace(/\bexport\s*\{[^}]*\}/g, '');
+  const script = document.createElement('script');
+  script.textContent = code;
+  document.head.appendChild(script);
+  script.remove();
+}
 
 // ---------------------------------------------------------------------------
 // Normalization
@@ -190,6 +200,7 @@ export async function renderPdfPagesAsImages(
   maxPages = 10,
   scale = 2.0,
 ): Promise<File[]> {
+  ensureWorkerLoaded();
   const buf = await pdfFile.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   const n = Math.min(doc.numPages, maxPages);
@@ -223,6 +234,8 @@ export async function parsePdfTestCardSummary(
   pdfFile: File,
   maneuverList: readonly string[],
 ): Promise<PdfTestCardExtractResult> {
+  ensureWorkerLoaded();
+
   const empty: PdfTestCardExtractResult = {
     testPointCount: 0,
     uniqueManeuvers: [],
