@@ -168,6 +168,7 @@ export default function App() {
               });
               setSelectedManeuvers(filtered);
               setInitialManeuversFromOCR(r.maneuversByPoint);
+              if (r.testNo) setFlightTestNumber(r.testNo);
             }}
             selectedFTEs={selectedFTEs}
             onFTEsChange={setSelectedFTEs}

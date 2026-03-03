@@ -137,6 +137,13 @@ function extractFtt(windowText, idAbbr, maneuverList) {
   return fttRaw;
 }
 
+// ---- Test No extraction (e.g. "Test No: FLT124") ----
+
+function extractTestNo(text) {
+  const m = text.match(/Test\s*No\s*[:\-]?\s*([A-Z0-9][\w\-]*)/i);
+  return m ? m[1].trim() : null;
+}
+
 // ---- Parse rows from text ----
 
 function parseFromText(text) {
@@ -263,6 +270,8 @@ exports.handler = async (event) => {
       }
     }
 
+    const testNo = extractTestNo(fullText);
+
     return {
       statusCode: 200,
       headers,
@@ -270,6 +279,7 @@ exports.handler = async (event) => {
         testPointCount: allItems.length,
         uniqueManeuvers,
         maneuversByPoint,
+        testNo,
       }),
     };
   } catch (err) {

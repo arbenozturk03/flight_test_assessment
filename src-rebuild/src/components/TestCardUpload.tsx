@@ -8,6 +8,7 @@ export interface TestCardExtractResult {
   testPointCount: number;
   uniqueManeuvers: string[];
   maneuversByPoint: Record<number, string>;
+  testNo?: string | null;
 }
 
 interface UploadedPage {
@@ -297,6 +298,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
               <div className="text-xs">
                 {pdfResult.testPointCount > 0 ? (
                   <span className="text-green-500">
+                    {pdfResult.testNo && <span className="font-medium">{pdfResult.testNo} — </span>}
                     {pdfResult.testPointCount} test points, {pdfResult.uniqueManeuvers.length} maneuvers
                   </span>
                 ) : (
