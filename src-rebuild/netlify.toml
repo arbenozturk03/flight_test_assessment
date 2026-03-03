@@ -2,7 +2,15 @@
   publish = "dist"
   command = "npm run build"
 
-# SPA: tüm yollar index.html'e yönlendir
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA: tüm yollar index.html'e yönlendir (must be AFTER /api/* redirect)
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -3,10 +3,6 @@ import { Upload, ImageIcon, Loader2, X, FileText } from 'lucide-react';
 import { createWorker, PSM } from 'tesseract.js';
 import { MANEUVER_LIST, ABBR_TO_MANEUVER } from '../data';
 import { parseTestCardFromWords, type OCRWord, type ParsedTestCard } from '../utils/parseTestCardOCR';
-import {
-  parsePdfTestCardSummary,
-  type PdfTestCardExtractResult,
-} from '../utils/pdfTestCardSummaryParser';
 
 export interface TestCardExtractResult {
   testPointCount: number;
@@ -33,7 +29,7 @@ let nextId = 0;
 
 function mergeExtractResults(
   a: TestCardExtractResult,
-  b: PdfTestCardExtractResult | null,
+  b: TestCardExtractResult | null,
 ): TestCardExtractResult {
   if (!b || (b.testPointCount === 0 && b.uniqueManeuvers.length === 0))
     return a;
@@ -46,7 +42,7 @@ function mergeExtractResults(
 
 export default function TestCardUpload({ onExtract, disabled }: TestCardUploadProps) {
   const [pages, setPages] = useState<UploadedPage[]>([]);
-  const [pdfResult, setPdfResult] = useState<PdfTestCardExtractResult | null>(null);
+  const [pdfResult, setPdfResult] = useState<TestCardExtractResult | null>(null);
   const [pdfProcessing, setPdfProcessing] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +91,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
 
   const combineAndEmit = (
     allPages: UploadedPage[],
-    pdfOverride?: PdfTestCardExtractResult | null,
+    pdfOverride?: TestCardExtractResult | null,
   ) => {
     let testPointCount = 0;
     const maneuversByPoint: Record<number, string> = {};
@@ -129,13 +125,23 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
     setPdfProcessing(true);
     setPdfError(null);
     try {
-      let merged: PdfTestCardExtractResult = {
+      let merged: TestCardExtractResult = {
         testPointCount: 0,
         uniqueManeuvers: [],
         maneuversByPoint: {},
       };
       for (const file of files) {
-        const result = await parsePdfTestCardSummary(file, MANEUVER_LIST);
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/parse-test-card', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: res.statusText }));
+          throw new Error(body.error ?? `HTTP ${res.status}`);
+        }
+        const result: TestCardExtractResult = await res.json();
         merged = {
           testPointCount: Math.max(merged.testPointCount, result.testPointCount),
           uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...result.uniqueManeuvers])],
