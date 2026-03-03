@@ -3,27 +3,18 @@
  * Extracts ID + FTT (+ optional TP#) from the "TEST CARD SUMMARY" table in a PDF.
  * Does not assume a fixed page number; scores all pages to find the best match.
  */
-import workerCode from 'pdfjs-dist/build/pdf.worker.min.mjs?raw';
 import * as pdfjsLib from 'pdfjs-dist';
 import { matchManeuverName } from './parseTestCardOCR';
 import { ABBR_TO_MANEUVER } from '../data';
+import { version as pdfjsVersion } from 'pdfjs-dist/package.json';
 
 export type TestSummaryItem = { id: string; ftt: string; tp?: string };
 
-// Lazily execute the pdf.js worker code on the main thread via <script>.
-// This sets globalThis.pdfjsWorker which pdf.js detects → fake-worker path.
-let _workerInitialised = false;
-function ensureWorkerLoaded() {
-  if (_workerInitialised) return;
-  _workerInitialised = true;
-  const code = (workerCode as string)
-    .replace(/import\.meta/g, '({url:document.baseURI})')
-    .replace(/\bexport\s*\{[^}]*\}/g, '');
-  const script = document.createElement('script');
-  script.textContent = code;
-  document.head.appendChild(script);
-  script.remove();
-}
+// Use CDN-hosted worker — avoids all bundling, tree-shaking, module-worker,
+// and Service Worker interception issues. pdf.js has built-in CDN support:
+// it wraps cross-origin URLs in a blob with `await import(url)`.
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.mjs`;
 
 // ---------------------------------------------------------------------------
 // Normalization
@@ -199,7 +190,6 @@ export async function renderPdfPagesAsImages(
   maxPages = 10,
   scale = 2.0,
 ): Promise<File[]> {
-  ensureWorkerLoaded();
   const buf = await pdfFile.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   const n = Math.min(doc.numPages, maxPages);
@@ -233,8 +223,6 @@ export async function parsePdfTestCardSummary(
   pdfFile: File,
   maneuverList: readonly string[],
 ): Promise<PdfTestCardExtractResult> {
-  ensureWorkerLoaded();
-
   const empty: PdfTestCardExtractResult = {
     testPointCount: 0,
     uniqueManeuvers: [],
