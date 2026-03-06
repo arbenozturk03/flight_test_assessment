@@ -1,7 +1,7 @@
 /** PDF generated offline (jsPDF local, no CDN). doc.save() triggers download to device Downloads/Files. */
 import jsPDF from 'jspdf';
 import type { Evaluation, Evaluations } from './types';
-import { HANDLING_CRITERIA, getManeuverCriteria, createDefaultEvaluation } from './data';
+import { HANDLING_CRITERIA, getManeuverCriteria, createDefaultEvaluation, resolvePdfLabel } from './data';
 
 interface ExportOptions {
   flightTestNumber: string;
@@ -210,7 +210,7 @@ export function exportToPdf({
 
     const dynValById = new Map<string, string>();
     dynCriteria.forEach((c) => {
-      const val = isCancelled ? cancelledVal : String(ev[c.id] ?? 'N/A');
+      const val = isCancelled ? cancelledVal : resolvePdfLabel(c, ev[c.id]);
       dynValById.set(c.id, val);
     });
 
@@ -231,7 +231,7 @@ export function exportToPdf({
       isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
       ...HANDLING_CRITERIA.map((c) => {
         if (isCancelled) return cancelledVal;
-        return String(ev[c.id as keyof Evaluation] ?? 'N/A');
+        return resolvePdfLabel(c, ev[c.id as keyof Evaluation]);
       }),
       ...dynCells,
     ];

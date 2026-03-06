@@ -6,6 +6,8 @@ export interface QualitativeCriterion {
   /** Short label (prevents line breaks in PDF table header) */
   shortLabel?: string;
   options: string[];
+  /** Maps numeric rating ('1','3','5') to descriptive text for PDF export */
+  pdfLabels?: Record<string, string>;
 }
 
 export interface Evaluation {

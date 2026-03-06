@@ -2,12 +2,16 @@ import { SKIP_VALUE } from '../types';
 
 const BORDER_INACTIVE = [
   'border-green-500 text-green-400 hover:bg-green-500/10',
+  'border-lime-500 text-lime-400 hover:bg-lime-500/10',
+  'border-yellow-500 text-yellow-400 hover:bg-yellow-500/10',
   'border-orange-500 text-orange-400 hover:bg-orange-500/10',
   'border-red-500 text-red-400 hover:bg-red-500/10',
 ];
 
 const BORDER_ACTIVE = [
   'border-green-500 bg-green-500 text-white',
+  'border-lime-500 bg-lime-500 text-gray-900',
+  'border-yellow-500 bg-yellow-500 text-gray-900',
   'border-orange-500 bg-orange-500 text-white',
   'border-red-500 bg-red-500 text-white',
 ];
@@ -43,11 +47,10 @@ export default function OptionSelector({
       >
         {label}
       </label>
-      {/* Single row, equal width, N/A included */}
       <div className="flex flex-nowrap items-stretch gap-2 min-w-0 overflow-hidden">
         {visibleOptions.map((opt, idx) => {
           const selected = value === opt;
-          const colorIdx = Math.min(idx, 2);
+          const colorIdx = Math.min(idx, BORDER_ACTIVE.length - 1);
           const cls = selected
             ? BORDER_ACTIVE[colorIdx]
             : BORDER_INACTIVE[colorIdx];
@@ -58,9 +61,9 @@ export default function OptionSelector({
               key={opt}
               type="button"
               onClick={() => onChange(value === opt ? null : opt)}
-              className={`min-h-14 min-w-0 flex-1 rounded-lg border-2 px-2 py-2 text-sm font-medium transition-all overflow-hidden flex items-center justify-center ${cls} ${errBorder}`}
+              className={`min-h-11 min-w-0 flex-1 rounded-lg border-2 px-2 py-2 text-sm font-semibold transition-all overflow-hidden flex items-center justify-center ${cls} ${errBorder}`}
             >
-              <span className="block w-full min-w-0 text-center leading-tight overflow-hidden whitespace-nowrap text-ellipsis" title={opt}>
+              <span className="block w-full min-w-0 text-center leading-tight" title={opt}>
                 {opt}
               </span>
             </button>
@@ -70,7 +73,7 @@ export default function OptionSelector({
           type="button"
           onClick={() => onChange(value === SKIP_VALUE ? null : SKIP_VALUE)}
           title="Not Applicable"
-          className={`min-h-14 shrink-0 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all flex items-center justify-center w-14 ${
+          className={`min-h-11 flex-1 rounded-lg border-2 px-2 py-2 text-sm font-semibold transition-all flex items-center justify-center ${
             value === SKIP_VALUE
               ? 'border-gray-500 bg-gray-500 text-white'
               : 'border-tusas-border bg-tusas-surface text-tusas-muted hover:border-gray-500'

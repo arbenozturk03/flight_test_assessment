@@ -96,92 +96,102 @@ export const ABBR_TO_MANEUVER: Record<string, string> = Object.fromEntries(
 
 // Standard panel (7 criteria – best → mid → worst)
 
+const RATING_1_5 = [SKIP_VALUE, '1', '2', '3', '4', '5'];
+
 export const HANDLING_CRITERIA: QualitativeCriterion[] = [
-  { id: 'controlHarmony',    label: 'Control Harmony',    options: [SKIP_VALUE, 'Fully Harmonious', 'Adequate', 'Disconnected'] },
-  { id: 'predictability',    label: 'Predictability',     shortLabel: 'Predict.', options: [SKIP_VALUE, 'Fully Transparent', 'Expected', 'Inconsistent'] },
-  { id: 'pilotCompensation', label: 'Pilot Compensation', options: [SKIP_VALUE, 'Minimal', 'Moderate', 'Considerable'] },
-  { id: 'workload',          label: 'Workload',           options: [SKIP_VALUE, 'Tolerable', 'Extensive', 'Intolerable'] },
-  { id: 'stickForces',       label: 'Stick Forces',       options: [SKIP_VALUE, 'Harmonious', 'Low', 'High'] },
-  { id: 'characteristic',    label: 'Characteristic',     shortLabel: 'Char.', options: [SKIP_VALUE, 'Ideal', 'Insufficient', 'Excessive'] },
-  { id: 'trim',              label: 'Trim',               options: [SKIP_VALUE, 'Effortless', 'Manageable', 'Compensation'] },
+  { id: 'controlHarmony',    label: 'Control Harmony',    options: RATING_1_5, pdfLabels: { '5': 'Fully Harmonious', '3': 'Adequate', '1': 'Disconnected' } },
+  { id: 'predictability',    label: 'Predictability',     shortLabel: 'Predict.', options: RATING_1_5, pdfLabels: { '5': 'Fully Transparent', '3': 'Expected', '1': 'Inconsistent' } },
+  { id: 'pilotCompensation', label: 'Pilot Compensation', options: RATING_1_5, pdfLabels: { '5': 'Minimal', '3': 'Moderate', '1': 'Considerable' } },
+  { id: 'workload',          label: 'Workload',           options: RATING_1_5, pdfLabels: { '5': 'Tolerable', '3': 'Extensive', '1': 'Intolerable' } },
+  { id: 'stickForces',       label: 'Stick Forces',       options: RATING_1_5, pdfLabels: { '5': 'Harmonious', '3': 'Low', '1': 'High' } },
+  { id: 'characteristic',    label: 'Characteristic',     shortLabel: 'Char.', options: RATING_1_5, pdfLabels: { '5': 'Ideal', '3': 'Insufficient', '1': 'Excessive' } },
+  { id: 'trim',              label: 'Trim',               options: RATING_1_5, pdfLabels: { '5': 'Effortless', '3': 'Manageable', '1': 'Compensation' } },
 ];
 
 // Dynamic panel (maneuver-specific – best → mid → worst)
 
 const DYNAMIC_CRITERIA_MAP: Record<string, QualitativeCriterion[]> = {
   'Bank Angle Capture and Hold': [
-    { id: 'initiation', label: 'Initiation', options: [SKIP_VALUE, 'Harmonious', 'Light', 'Fatiguing'] },
-    { id: 'capture',    label: 'Capture',    options: [SKIP_VALUE, 'Deadbeat', 'Underdamped', 'Oscillatory'] },
-    { id: 'hold',       label: 'Hold',       options: [SKIP_VALUE, 'Locked-in', 'Hesitant', 'Demanding Workload'] },
-    { id: 'rollOut',    label: 'Roll Out',   options: [SKIP_VALUE, 'Target', 'Undershoot', 'Overshoot'] },
+    { id: 'initiation', label: 'Initiation', options: RATING_1_5, pdfLabels: { '5': 'Harmonious', '3': 'Light', '1': 'Fatiguing' } },
+    { id: 'capture',    label: 'Capture',    options: RATING_1_5, pdfLabels: { '5': 'Deadbeat', '3': 'Underdamped', '1': 'Oscillatory' } },
+    { id: 'hold',       label: 'Hold',       options: RATING_1_5, pdfLabels: { '5': 'Locked-in', '3': 'Hesitant', '1': 'Demanding Workload' } },
+    { id: 'rollOut',    label: 'Roll Out',   options: RATING_1_5, pdfLabels: { '5': 'Target', '3': 'Undershoot', '1': 'Overshoot' } },
   ],
   'Pitch and Roll Tracking': [
-    { id: 'grossAcquisition', label: 'Gross Acquisition', options: [SKIP_VALUE, 'Steady', 'Sluggish', 'Abrupt'] },
-    { id: 'fineTracking',     label: 'Fine Tracking',     options: [SKIP_VALUE, 'Pinpoint Precision', 'Drifting', 'Jumpy'] },
-    { id: 'dynamicTracking',  label: 'Dynamic Tracking',  options: [SKIP_VALUE, 'Stays with Target', 'Falls Behind Target', 'Too Aggressive'] },
-    { id: 'taskTermination',  label: 'Task Termination',  options: [SKIP_VALUE, 'Smooth', 'Moderate', 'Harsh'] },
+    { id: 'grossAcquisition', label: 'Gross Acquisition', options: RATING_1_5, pdfLabels: { '5': 'Steady', '3': 'Sluggish', '1': 'Abrupt' } },
+    { id: 'fineTracking',     label: 'Fine Tracking',     options: RATING_1_5, pdfLabels: { '5': 'Pinpoint Precision', '3': 'Drifting', '1': 'Jumpy' } },
+    { id: 'dynamicTracking',  label: 'Dynamic Tracking',  options: RATING_1_5, pdfLabels: { '5': 'Stays with Target', '3': 'Falls Behind Target', '1': 'Too Aggressive' } },
+    { id: 'taskTermination',  label: 'Task Termination',  options: RATING_1_5, pdfLabels: { '5': 'Smooth', '3': 'Moderate', '1': 'Harsh' } },
   ],
   'Coordinated Turn': [
-    { id: 'initiation',            label: 'Initiation',               options: [SKIP_VALUE, 'Harmonious', 'Light', 'Fatiguing'] },
-    { id: 'capture',               label: 'Capture',                  options: [SKIP_VALUE, 'Deadbeat', 'Underdamped', 'Oscillatory'] },
-    { id: 'hold',                  label: 'Hold',                     options: [SKIP_VALUE, 'Center', 'Slip Tendency', 'Skid Tendency'] },
-    { id: 'rollOutHeadingCapture', label: 'Roll Out Heading Capture', options: [SKIP_VALUE, 'Target', 'Undershoot', 'Overshoot'] },
+    { id: 'initiation',            label: 'Initiation',               options: RATING_1_5, pdfLabels: { '5': 'Harmonious', '3': 'Light', '1': 'Fatiguing' } },
+    { id: 'capture',               label: 'Capture',                  options: RATING_1_5, pdfLabels: { '5': 'Deadbeat', '3': 'Underdamped', '1': 'Oscillatory' } },
+    { id: 'hold',                  label: 'Hold',                     options: RATING_1_5, pdfLabels: { '5': 'Center', '3': 'Slip Tendency', '1': 'Skid Tendency' } },
+    { id: 'rollOutHeadingCapture', label: 'Roll Out Heading Capture', options: RATING_1_5, pdfLabels: { '5': 'Target', '3': 'Undershoot', '1': 'Overshoot' } },
   ],
   'Pitch Angle Capture and Hold': [
-    { id: 'initiation', label: 'Initiation', options: [SKIP_VALUE, 'Harmonious', 'Too Light', 'Heavy'] },
-    { id: 'capture',    label: 'Capture',    options: [SKIP_VALUE, 'Deadbeat', 'Underdamped', 'Oscillatory'] },
-    { id: 'hold',       label: 'Hold',       options: [SKIP_VALUE, 'Locked-in', 'Hesitant', 'Demanding Workload'] },
-    { id: 'recovery',   label: 'Recovery',   options: [SKIP_VALUE, 'Smooth', 'Moderate', 'Harsh'] },
+    { id: 'initiation', label: 'Initiation', options: RATING_1_5, pdfLabels: { '5': 'Harmonious', '3': 'Too Light', '1': 'Heavy' } },
+    { id: 'capture',    label: 'Capture',    options: RATING_1_5, pdfLabels: { '5': 'Deadbeat', '3': 'Underdamped', '1': 'Oscillatory' } },
+    { id: 'hold',       label: 'Hold',       options: RATING_1_5, pdfLabels: { '5': 'Locked-in', '3': 'Hesitant', '1': 'Demanding Workload' } },
+    { id: 'recovery',   label: 'Recovery',   options: RATING_1_5, pdfLabels: { '5': 'Smooth', '3': 'Moderate', '1': 'Harsh' } },
   ],
   'Pitch Tracking': [
-    { id: 'grossAcquisition', label: 'Gross Acquisition', options: [SKIP_VALUE, 'Natural', 'Unpredictable', 'Too Aggressive'] },
-    { id: 'fineTracking',     label: 'Fine Tracking',     options: [SKIP_VALUE, 'Precise', 'Undershoot', 'Jumpy'] },
-    { id: 'dynamicTracking',  label: 'Dynamic Tracking',  options: [SKIP_VALUE, 'Stays with Target', 'Falls Behind Target', 'Too Aggressive'] },
-    { id: 'taskTermination',  label: 'Task Termination',  options: [SKIP_VALUE, 'Smooth', 'Moderate', 'Harsh'] },
+    { id: 'grossAcquisition', label: 'Gross Acquisition', options: RATING_1_5, pdfLabels: { '5': 'Natural', '3': 'Unpredictable', '1': 'Too Aggressive' } },
+    { id: 'fineTracking',     label: 'Fine Tracking',     options: RATING_1_5, pdfLabels: { '5': 'Precise', '3': 'Undershoot', '1': 'Jumpy' } },
+    { id: 'dynamicTracking',  label: 'Dynamic Tracking',  options: RATING_1_5, pdfLabels: { '5': 'Stays with Target', '3': 'Falls Behind Target', '1': 'Too Aggressive' } },
+    { id: 'taskTermination',  label: 'Task Termination',  options: RATING_1_5, pdfLabels: { '5': 'Smooth', '3': 'Moderate', '1': 'Harsh' } },
   ],
   'Level Acceleration': [
-    { id: 'powerApplication',       label: 'Power Application',        options: [SKIP_VALUE, 'Neutral', 'Left Yaw', 'Right Yaw'] },
-    { id: 'dynamicAcceleration',    label: 'Dynamic Acceleration',     options: [SKIP_VALUE, 'Manageable', 'Unpredictable', 'Heavy Rudder'] },
-    { id: 'targetSpeedCapture',     label: 'Target Speed Capture',     options: [SKIP_VALUE, 'Predictable', 'Slow', 'Abrupt'] },
-    { id: 'highSpeedStabilization', label: 'High Speed Stabilization', options: [SKIP_VALUE, 'Easy', 'Difficult', 'Sensitive'] },
+    { id: 'powerApplication',       label: 'Power Application',        options: RATING_1_5, pdfLabels: { '5': 'Neutral', '3': 'Left Yaw', '1': 'Right Yaw' } },
+    { id: 'dynamicAcceleration',    label: 'Dynamic Acceleration',     options: RATING_1_5, pdfLabels: { '5': 'Manageable', '3': 'Unpredictable', '1': 'Heavy Rudder' } },
+    { id: 'targetSpeedCapture',     label: 'Target Speed Capture',     options: RATING_1_5, pdfLabels: { '5': 'Predictable', '3': 'Slow', '1': 'Abrupt' } },
+    { id: 'highSpeedStabilization', label: 'High Speed Stabilization', options: RATING_1_5, pdfLabels: { '5': 'Easy', '3': 'Difficult', '1': 'Sensitive' } },
   ],
   'Level Deceleration': [
-    { id: 'highSpeedStabilization', label: 'High Speed Stabilization', options: [SKIP_VALUE, 'Easy', 'Difficult', 'Sensitive'] },
-    { id: 'initiation',            label: 'Initiation',               options: [SKIP_VALUE, 'Predictable', 'Very Slow', 'Abrupt'] },
-    { id: 'dynamicDeceleration',   label: 'Dynamic Deceleration',     options: [SKIP_VALUE, 'Manageable', 'Unpredictable', 'Heavy Rudder'] },
-    { id: 'targetSpeedCapture',    label: 'Target Speed Capture',     options: [SKIP_VALUE, 'Predictable', 'Slow', 'Abrupt'] },
+    { id: 'highSpeedStabilization', label: 'High Speed Stabilization', options: RATING_1_5, pdfLabels: { '5': 'Easy', '3': 'Difficult', '1': 'Sensitive' } },
+    { id: 'initiation',            label: 'Initiation',               options: RATING_1_5, pdfLabels: { '5': 'Predictable', '3': 'Very Slow', '1': 'Abrupt' } },
+    { id: 'dynamicDeceleration',   label: 'Dynamic Deceleration',     options: RATING_1_5, pdfLabels: { '5': 'Manageable', '3': 'Unpredictable', '1': 'Heavy Rudder' } },
+    { id: 'targetSpeedCapture',    label: 'Target Speed Capture',     options: RATING_1_5, pdfLabels: { '5': 'Predictable', '3': 'Slow', '1': 'Abrupt' } },
   ],
   'Inverted Flight': [
-    { id: 'rollInitiation',       label: 'Roll Initiation',       options: [SKIP_VALUE, 'Moderate', 'Slow', 'Abrupt'] },
-    { id: 'invertedCapture',      label: 'Inverted Capture',      options: [SKIP_VALUE, 'Holds', 'Sinks', 'Over-Push'] },
-    { id: 'steadyState',          label: 'Steady State',          options: [SKIP_VALUE, 'Stable', 'Neutrally', 'Divergent'] },
-    { id: 'controlEffectiveness', label: 'Control Effectiveness', options: [SKIP_VALUE, 'Effective', 'Sluggish', 'Sensitive'] },
-    { id: 'recovery',             label: 'Recovery',              options: [SKIP_VALUE, 'Symmetric to Entry', 'Slower than Entry', 'Faster than Entry'] },
+    { id: 'rollInitiation',       label: 'Roll Initiation',       options: RATING_1_5, pdfLabels: { '5': 'Moderate', '3': 'Slow', '1': 'Abrupt' } },
+    { id: 'invertedCapture',      label: 'Inverted Capture',      options: RATING_1_5, pdfLabels: { '5': 'Holds', '3': 'Sinks', '1': 'Over-Push' } },
+    { id: 'steadyState',          label: 'Steady State',          options: RATING_1_5, pdfLabels: { '5': 'Stable', '3': 'Neutrally', '1': 'Divergent' } },
+    { id: 'controlEffectiveness', label: 'Control Effectiveness', options: RATING_1_5, pdfLabels: { '5': 'Effective', '3': 'Sluggish', '1': 'Sensitive' } },
+    { id: 'recovery',             label: 'Recovery',              options: RATING_1_5, pdfLabels: { '5': 'Symmetric to Entry', '3': 'Slower than Entry', '1': 'Faster than Entry' } },
   ],
   'Landing Gear Transition': [
-    { id: 'initiation',           label: 'Initiation',                options: [SKIP_VALUE, 'None', 'Nose Drop', 'Nose Up'] },
-    { id: 'clawTransition',       label: 'Claw Transition',           options: [SKIP_VALUE, 'Ideal', 'Insufficient', 'Excessive'] },
-    { id: 'transientPitchChange', label: 'Transient in Pitch Change', options: [SKIP_VALUE, 'Manageable', 'Slow', 'Abrupt'] },
-    { id: 'stabilization',        label: 'Stabilization (Speed)',     options: [SKIP_VALUE, 'Expected Drag', 'Massive Drag', 'Minimal Drag'] },
+    { id: 'initiation',           label: 'Initiation',                options: RATING_1_5, pdfLabels: { '5': 'None', '3': 'Nose Drop', '1': 'Nose Up' } },
+    { id: 'clawTransition',       label: 'Claw Transition',           options: RATING_1_5, pdfLabels: { '5': 'Ideal', '3': 'Insufficient', '1': 'Excessive' } },
+    { id: 'transientPitchChange', label: 'Transient in Pitch Change', options: RATING_1_5, pdfLabels: { '5': 'Manageable', '3': 'Slow', '1': 'Abrupt' } },
+    { id: 'stabilization',        label: 'Stabilization (Speed)',     options: RATING_1_5, pdfLabels: { '5': 'Expected Drag', '3': 'Massive Drag', '1': 'Minimal Drag' } },
   ],
   '1-G Stabilized Push Over': [
-    { id: 'pushOverInitiation', label: 'Push Over Initiation', options: [SKIP_VALUE, 'Proportional', 'Light', 'Heavy'] },
-    { id: 'targetCapture',      label: 'Target Capture',       options: [SKIP_VALUE, 'Deadbeat', 'Oscillates', 'Hard Stop'] },
-    { id: 'dive',               label: 'Dive',                 options: [SKIP_VALUE, 'Proportional', 'Sluggish', 'Abrupt'] },
-    { id: 'recoveryPullForce',  label: 'Recovery Pull Force',  options: [SKIP_VALUE, 'Symmetric to Push', 'Lighter than Push', 'Heavier than Push'] },
+    { id: 'pushOverInitiation', label: 'Push Over Initiation', options: RATING_1_5, pdfLabels: { '5': 'Proportional', '3': 'Light', '1': 'Heavy' } },
+    { id: 'targetCapture',      label: 'Target Capture',       options: RATING_1_5, pdfLabels: { '5': 'Deadbeat', '3': 'Oscillates', '1': 'Hard Stop' } },
+    { id: 'dive',               label: 'Dive',                 options: RATING_1_5, pdfLabels: { '5': 'Proportional', '3': 'Sluggish', '1': 'Abrupt' } },
+    { id: 'recoveryPullForce',  label: 'Recovery Pull Force',  options: RATING_1_5, pdfLabels: { '5': 'Symmetric to Push', '3': 'Lighter than Push', '1': 'Heavier than Push' } },
   ],
 };
 
 const DEFAULT_DYNAMIC_CRITERIA: QualitativeCriterion[] = [
-  { id: 'initiation', label: 'Initiation', options: [SKIP_VALUE, 'Harmonious', 'Light', 'Fatiguing'] },
-  { id: 'capture',    label: 'Capture',    options: [SKIP_VALUE, 'Deadbeat', 'Underdamped', 'Oscillatory'] },
-  { id: 'hold',       label: 'Hold',       options: [SKIP_VALUE, 'Locked-in', 'Hesitant', 'Demanding Workload'] },
-  { id: 'rollOut',    label: 'Roll Out',   options: [SKIP_VALUE, 'On-target', 'Undershoot', 'Overshoot'] },
+  { id: 'initiation', label: 'Initiation', options: RATING_1_5, pdfLabels: { '5': 'Harmonious', '3': 'Light', '1': 'Fatiguing' } },
+  { id: 'capture',    label: 'Capture',    options: RATING_1_5, pdfLabels: { '5': 'Deadbeat', '3': 'Underdamped', '1': 'Oscillatory' } },
+  { id: 'hold',       label: 'Hold',       options: RATING_1_5, pdfLabels: { '5': 'Locked-in', '3': 'Hesitant', '1': 'Demanding Workload' } },
+  { id: 'rollOut',    label: 'Roll Out',   options: RATING_1_5, pdfLabels: { '5': 'On-target', '3': 'Undershoot', '1': 'Overshoot' } },
 ];
 
 export function getManeuverCriteria(maneuverName: string | null): QualitativeCriterion[] {
   if (!maneuverName) return DEFAULT_DYNAMIC_CRITERIA;
   return DYNAMIC_CRITERIA_MAP[maneuverName] ?? DEFAULT_DYNAMIC_CRITERIA;
+}
+
+/** Convert a numeric rating to its descriptive PDF text (5→best, 3→mid, 1→worst; 2,4 stay numeric) */
+export function resolvePdfLabel(criterion: QualitativeCriterion, value: string | number | null): string {
+  if (value == null) return 'N/A';
+  const str = String(value);
+  if (str === SKIP_VALUE) return 'N/A';
+  return criterion.pdfLabels?.[str] ?? str;
 }
 
 // Helper functions
