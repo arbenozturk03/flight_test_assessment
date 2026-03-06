@@ -125,7 +125,11 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
   const processPdfs = async (files: File[]) => {
     setPdfProcessing(true);
     setPdfError(null);
-    const endpoints = ['/.netlify/functions/parse-test-card', '/api/parse-test-card'];
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    const endpoints = [
+      `${base}/.netlify/functions/parse-test-card`,
+      `${base}/api/parse-test-card`,
+    ];
     try {
       let merged: TestCardExtractResult = {
         testPointCount: 0,
@@ -150,12 +154,21 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
         if (!res?.ok) {
           throw new Error(typeof lastError === 'string' ? lastError : JSON.stringify(lastError));
         }
-        const result: TestCardExtractResult = await res.json();
+        const result = await res.json();
+        if (result == null || typeof result.testPointCount !== 'number') {
+          throw new Error('Sunucu geçersiz yanıt verdi.');
+        }
+        const typedResult: TestCardExtractResult = {
+          testPointCount: result.testPointCount ?? 0,
+          uniqueManeuvers: Array.isArray(result.uniqueManeuvers) ? result.uniqueManeuvers : [],
+          maneuversByPoint: result.maneuversByPoint && typeof result.maneuversByPoint === 'object' ? result.maneuversByPoint : {},
+          testNo: result.testNo ?? undefined,
+        };
         merged = {
-          testPointCount: Math.max(merged.testPointCount, result.testPointCount),
-          uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...result.uniqueManeuvers])],
-          maneuversByPoint: { ...merged.maneuversByPoint, ...result.maneuversByPoint },
-          testNo: result.testNo || merged.testNo,
+          testPointCount: Math.max(merged.testPointCount, typedResult.testPointCount),
+          uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...typedResult.uniqueManeuvers])],
+          maneuversByPoint: { ...merged.maneuversByPoint, ...typedResult.maneuversByPoint },
+          testNo: typedResult.testNo || merged.testNo,
         };
       }
       setPdfResult(merged);
@@ -311,7 +324,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
                     {pdfResult.testPointCount} test points, {pdfResult.uniqueManeuvers.length} maneuvers
                   </span>
                 ) : (
-                  <span className="text-tusas-muted">Bulunamadı</span>
+                  <span className="text-tusas-muted">PDF okundu. Test kartı formatında veri bulunamadı (FTT / # sütunları gerekli).</span>
                 )}
               </div>
             </div>

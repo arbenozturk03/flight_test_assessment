@@ -204,10 +204,20 @@ exports.handler = async (event) => {
   }
 
   try {
-    const bodyBuffer = Buffer.from(
-      event.body || "",
-      event.isBase64Encoded ? "base64" : "utf8",
-    );
+    const rawBody = event.body ?? "";
+    const isBase64 = event.isBase64Encoded === true ||
+      (typeof rawBody === "string" && /^[A-Za-z0-9+/=]+$/.test(rawBody.trim()) && rawBody.length > 100);
+    const bodyBuffer = Buffer.from(rawBody, isBase64 ? "base64" : "utf8");
+
+    if (bodyBuffer.length < 100) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          error: "Request body missing or too small. Please upload a PDF file.",
+        }),
+      };
+    }
 
     const reqHeaders = {};
     for (const [k, v] of Object.entries(event.headers || {})) {
