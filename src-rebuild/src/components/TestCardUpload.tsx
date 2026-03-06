@@ -3,7 +3,7 @@ import { Upload, ImageIcon, Loader2, X, FileText } from 'lucide-react';
 import { createWorker, PSM } from 'tesseract.js';
 import { MANEUVER_LIST, ABBR_TO_MANEUVER } from '../data';
 import { parseTestCardFromWords, type OCRWord, type ParsedTestCard } from '../utils/parseTestCardOCR';
-import { extractTextFromPdfFile } from '../utils/pdfToText';
+import { parseTestCardPdf } from '../utils/parseTestCardPdf';
 
 export interface TestCardExtractResult {
   testPointCount: number;
@@ -126,9 +126,6 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
   const processPdfs = async (files: File[]) => {
     setPdfProcessing(true);
     setPdfError(null);
-    const base = typeof window !== 'undefined' ? window.location.origin : '';
-    const textEndpoint = `${base}/.netlify/functions/parse-test-card-text`;
-    const textEndpointAlt = `${base}/api/parse-test-card-text`;
     try {
       let merged: TestCardExtractResult = {
         testPointCount: 0,
@@ -136,42 +133,12 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
         maneuversByPoint: {},
       };
       for (const file of files) {
-        const text = await extractTextFromPdfFile(file);
-        const body = JSON.stringify({ text });
-        let res: Response | null = null;
-        let lastError = '';
-        for (const url of [textEndpoint, textEndpointAlt]) {
-          try {
-            res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body,
-            });
-            if (res.ok) break;
-            const errBody = await res.json().catch(() => ({}));
-            lastError = errBody?.error ?? errBody?.message ?? `HTTP ${res.status}`;
-          } catch (e) {
-            lastError = e instanceof Error ? e.message : String(e);
-          }
-        }
-        if (!res?.ok) {
-          throw new Error(typeof lastError === 'string' ? lastError : JSON.stringify(lastError));
-        }
-        const result = await res.json();
-        if (result == null || typeof result.testPointCount !== 'number') {
-          throw new Error('Sunucu geçersiz yanıt verdi.');
-        }
-        const typedResult: TestCardExtractResult = {
-          testPointCount: result.testPointCount ?? 0,
-          uniqueManeuvers: Array.isArray(result.uniqueManeuvers) ? result.uniqueManeuvers : [],
-          maneuversByPoint: result.maneuversByPoint && typeof result.maneuversByPoint === 'object' ? result.maneuversByPoint : {},
-          testNo: result.testNo ?? undefined,
-        };
+        const result = await parseTestCardPdf(file);
         merged = {
-          testPointCount: Math.max(merged.testPointCount, typedResult.testPointCount),
-          uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...typedResult.uniqueManeuvers])],
-          maneuversByPoint: { ...merged.maneuversByPoint, ...typedResult.maneuversByPoint },
-          testNo: typedResult.testNo || merged.testNo,
+          testPointCount: Math.max(merged.testPointCount, result.testPointCount),
+          uniqueManeuvers: [...new Set([...merged.uniqueManeuvers, ...result.uniqueManeuvers])],
+          maneuversByPoint: { ...merged.maneuversByPoint, ...result.maneuversByPoint },
+          testNo: result.testNo || merged.testNo,
         };
       }
       setPdfResult(merged);
