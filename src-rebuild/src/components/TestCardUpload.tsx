@@ -125,6 +125,7 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
   const processPdfs = async (files: File[]) => {
     setPdfProcessing(true);
     setPdfError(null);
+    const endpoints = ['/.netlify/functions/parse-test-card', '/api/parse-test-card'];
     try {
       let merged: TestCardExtractResult = {
         testPointCount: 0,
@@ -132,15 +133,22 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
         maneuversByPoint: {},
       };
       for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/.netlify/functions/parse-test-card', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: res.statusText }));
-          throw new Error(body.error ?? `HTTP ${res.status}`);
+        let res: Response | null = null;
+        let lastError: string = '';
+        for (const url of endpoints) {
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            res = await fetch(url, { method: 'POST', body: formData });
+            if (res.ok) break;
+            const body = await res.json().catch(() => ({}));
+            lastError = body?.error ?? body?.message ?? `HTTP ${res.status}`;
+          } catch (e) {
+            lastError = e instanceof Error ? e.message : String(e);
+          }
+        }
+        if (!res?.ok) {
+          throw new Error(typeof lastError === 'string' ? lastError : JSON.stringify(lastError));
         }
         const result: TestCardExtractResult = await res.json();
         merged = {
