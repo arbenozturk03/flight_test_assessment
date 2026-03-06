@@ -3,6 +3,7 @@ import { Upload, ImageIcon, Loader2, X, FileText } from 'lucide-react';
 import { createWorker, PSM } from 'tesseract.js';
 import { MANEUVER_LIST, ABBR_TO_MANEUVER } from '../data';
 import { parseTestCardFromWords, type OCRWord, type ParsedTestCard } from '../utils/parseTestCardOCR';
+import { extractTextFromPdfFile } from '../utils/pdfToText';
 
 export interface TestCardExtractResult {
   testPointCount: number;
@@ -126,10 +127,8 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
     setPdfProcessing(true);
     setPdfError(null);
     const base = typeof window !== 'undefined' ? window.location.origin : '';
-    const endpoints = [
-      `${base}/.netlify/functions/parse-test-card`,
-      `${base}/api/parse-test-card`,
-    ];
+    const textEndpoint = `${base}/.netlify/functions/parse-test-card-text`;
+    const textEndpointAlt = `${base}/api/parse-test-card-text`;
     try {
       let merged: TestCardExtractResult = {
         testPointCount: 0,
@@ -137,16 +136,20 @@ export default function TestCardUpload({ onExtract, disabled }: TestCardUploadPr
         maneuversByPoint: {},
       };
       for (const file of files) {
+        const text = await extractTextFromPdfFile(file);
+        const body = JSON.stringify({ text });
         let res: Response | null = null;
-        let lastError: string = '';
-        for (const url of endpoints) {
-          const formData = new FormData();
-          formData.append('file', file);
+        let lastError = '';
+        for (const url of [textEndpoint, textEndpointAlt]) {
           try {
-            res = await fetch(url, { method: 'POST', body: formData });
+            res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body,
+            });
             if (res.ok) break;
-            const body = await res.json().catch(() => ({}));
-            lastError = body?.error ?? body?.message ?? `HTTP ${res.status}`;
+            const errBody = await res.json().catch(() => ({}));
+            lastError = errBody?.error ?? errBody?.message ?? `HTTP ${res.status}`;
           } catch (e) {
             lastError = e instanceof Error ? e.message : String(e);
           }
