@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Check, ChevronDown, CircleX, ClipboardList, Copy, Download, Pencil } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, CircleX, ClipboardList, Copy, Download, Pencil, RefreshCw } from 'lucide-react';
 import type { Evaluation, Evaluations, TestPointData } from '../types';
 import {
   HANDLING_CRITERIA,
@@ -63,12 +63,19 @@ export default function TestEvaluation({
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [maneuverGridOpen, setManeuverGridOpen] = useState(!currentManeuver);
+  const [appliedFromTp, setAppliedFromTp] = useState<number | null>(null);
   const errorFieldIds = validationError ? getMissingFieldIds(currentEval, currentManeuver) : [];
   const mainContentRef = useRef<HTMLElement>(null);
 
   const scrollToTop = () => {
     mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    setManeuverGridOpen(!currentManeuver);
+    setAppliedFromTp(null);
+  }, [currentTestPoint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!startTime) return;
@@ -126,6 +133,17 @@ export default function TestEvaluation({
       generalComment: source.generalComment,
       cancelled: false,
     });
+    setAppliedFromTp(sourceTp);
+  };
+
+  const clearEvaluation = () => {
+    emitUpdate({
+      evaluation: createDefaultEvaluation(),
+      comments: {},
+      generalComment: '',
+      cancelled: false,
+    });
+    setAppliedFromTp(null);
   };
 
   const completedOtherTPs = completed.filter((tp) => tp !== currentTestPoint);
@@ -168,29 +186,29 @@ export default function TestEvaluation({
   );
 
   return (
-    <div className="flex h-full w-full max-w-[100vw] flex-col overflow-x-hidden md:flex-row">
+    <div className="flex h-full w-full max-w-[100vw] flex-row overflow-x-hidden">
       {/* Sidebar */}
-      <aside className="w-full min-w-0 shrink-0 border-b border-tusas-border bg-tusas-surface p-4 md:w-48 md:border-b-0 md:border-r md:overflow-y-auto">
+      <aside className="w-44 min-w-[11rem] shrink-0 border-r border-tusas-border bg-tusas-surface p-3 overflow-y-auto min-h-0">
         {startTime && (
-          <div className="mb-4 rounded-lg border border-tusas-border bg-tusas-bg px-4 py-3">
-            <p className="text-xs font-medium text-tusas-muted">Flight Test Time:</p>
-            <p className="font-mono text-xl font-bold tabular-nums text-tusas-text">{chrono}</p>
+          <div className="mb-3 rounded-lg border border-tusas-border bg-tusas-bg px-3 py-2">
+            <p className="text-[10px] font-medium text-tusas-muted">Flight Time</p>
+            <p className="font-mono text-base font-bold tabular-nums text-tusas-text">{chrono}</p>
           </div>
         )}
-        <div className="mb-4 flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-tusas-text">Test Points</h2>
+        <div className="mb-3 flex flex-col gap-1.5">
+          <h2 className="text-sm font-semibold text-tusas-text">Test Points</h2>
           <button
             type="button"
             onClick={onEditManeuvers}
-            className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-tusas-border px-3 py-1.5 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+            className="flex min-h-[32px] items-center justify-center gap-1 rounded-lg border border-tusas-border px-2 py-1 text-xs text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
             title="Edit Maneuvers"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3 w-3" />
             Edit Maneuvers
           </button>
         </div>
 
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {allDone && (
             <button
               type="button"
@@ -198,12 +216,12 @@ export default function TestEvaluation({
                 onShowSummaryChange(true);
                 onSelectTestPoint(null);
               }}
-              className={`flex w-full min-h-[56px] items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm transition-all ${
+              className={`flex w-full min-h-[36px] items-center gap-1.5 rounded-lg border-2 px-2 py-1.5 text-left text-xs transition-all ${
                 showSummary ? ACTIVE : 'border-transparent text-tusas-text hover:bg-tusas-bg'
               }`}
             >
-              <ClipboardList className="h-5 w-5 shrink-0" />
-              General Evaluation
+              <ClipboardList className="h-4 w-4 shrink-0" />
+              Summary
             </button>
           )}
 
@@ -215,33 +233,32 @@ export default function TestEvaluation({
                 onSelectTestPoint(tp);
                 onShowSummaryChange(false);
               }}
-              className={`flex w-full min-h-[56px] items-center justify-between gap-2 rounded-lg border-2 px-3 py-2.5 text-left text-sm transition-all ${
+              className={`flex w-full min-h-[36px] items-center justify-between gap-1 rounded-lg border-2 px-2 py-1.5 text-left text-xs transition-all ${
                 currentTestPoint === tp
                   ? ACTIVE
                   : 'border-transparent text-tusas-text hover:bg-tusas-bg'
               }`}
             >
               <span className="truncate">
-                TP {tp}/{testPointCount}
-                {evaluations[tp]?.maneuver && ` - ${getManeuverAbbr(evaluations[tp].maneuver!)}`}
+                {tp}/{testPointCount}
+                {evaluations[tp]?.maneuver && ` ${getManeuverAbbr(evaluations[tp].maneuver!)}`}
               </span>
               {completed.includes(tp) && (
-                <Check className="h-5 w-5 shrink-0 text-tusas-success" />
+                <Check className="h-3.5 w-3.5 shrink-0 text-tusas-success" />
               )}
               {cancelled.includes(tp) && (
-                <CircleX className="h-5 w-5 shrink-0 text-tusas-cancelled" />
+                <CircleX className="h-3.5 w-3.5 shrink-0 text-tusas-cancelled" />
               )}
             </button>
           ))}
         </nav>
 
         {!allDone && unevaluated.length > 0 && (
-          <div className="mt-4 rounded-lg border-2 border-amber-600 bg-amber-500/10 p-3">
-            <p className="text-sm font-semibold text-amber-600">
-              The following test point{unevaluated.length > 1 ? 's have' : ' has'}{' '}
-              not been evaluated:
+          <div className="mt-3 rounded-lg border-2 border-amber-600 bg-amber-500/10 p-2">
+            <p className="text-[10px] font-semibold text-amber-600">
+              Not evaluated:
             </p>
-            <p className="mt-1 text-sm font-medium text-tusas-text">
+            <p className="mt-0.5 text-[10px] font-medium text-tusas-text">
               {unevaluated.join(', ')}
             </p>
           </div>
@@ -251,16 +268,16 @@ export default function TestEvaluation({
           <button
             type="button"
             onClick={handleFinish}
-            className="mt-6 flex w-full min-h-[56px] items-center justify-center gap-2 rounded-lg bg-green-600 font-semibold text-white transition-all hover:bg-green-500"
+            className="mt-4 flex w-full min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-green-600 text-xs font-semibold text-white transition-all hover:bg-green-500"
           >
-            <Download className="h-5 w-5" />
+            <Download className="h-4 w-4" />
             Finish Test
           </button>
         )}
       </aside>
 
       {/* Main content */}
-      <main ref={mainContentRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:pl-3 md:pr-4 md:py-6">
+      <main ref={mainContentRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 min-h-0">
         {showSummary && allDone ? (
           <GeneralEvaluationSummary
             maneuverPool={maneuverPool}
@@ -285,25 +302,59 @@ export default function TestEvaluation({
               </div>
             </div>
 
-            {/* Maneuver selection */}
-            <section className="rounded-lg border border-tusas-border bg-tusas-surface p-6">
-              <h3 className="mb-4 text-base font-semibold text-tusas-muted">
-                Select maneuver for this test point
-              </h3>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {maneuverPool.map((m) => (
+            {/* Maneuver selection – collapsible after selection */}
+            <section className="rounded-lg border border-tusas-border bg-tusas-surface">
+              {currentManeuver && !maneuverGridOpen ? (
+                <div className="flex items-center justify-between gap-3 px-6 py-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-semibold text-tusas-muted shrink-0">Maneuver:</span>
+                    <span className="text-sm font-bold text-tusas-text truncate">{currentManeuver}</span>
+                  </div>
                   <button
-                    key={m}
                     type="button"
-                    onClick={() => selectManeuver(m)}
-                    className={`h-14 w-full min-w-0 rounded-lg border-2 px-3 py-2 text-center text-sm font-medium leading-tight transition-all overflow-hidden ${
-                      currentManeuver === m ? ACTIVE : INACTIVE
-                    }`}
+                    onClick={() => setManeuverGridOpen(true)}
+                    className="flex items-center gap-1.5 shrink-0 rounded-lg border border-tusas-border px-3 py-1.5 text-xs font-medium text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
                   >
-                    <span className="block overflow-hidden text-ellipsis break-words line-clamp-2">{m}</span>
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Change
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-tusas-muted">
+                      Select maneuver for this test point
+                    </h3>
+                    {currentManeuver && (
+                      <button
+                        type="button"
+                        onClick={() => setManeuverGridOpen(false)}
+                        className="flex items-center gap-1 text-xs text-tusas-muted hover:text-tusas-text transition-colors"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                        Collapse
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {maneuverPool.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          selectManeuver(m);
+                          setManeuverGridOpen(false);
+                        }}
+                        className={`h-12 w-full min-w-0 rounded-lg border-2 px-2 py-1.5 text-center text-xs font-medium leading-tight transition-all overflow-hidden ${
+                          currentManeuver === m ? ACTIVE : INACTIVE
+                        }`}
+                      >
+                        <span className="block overflow-hidden text-ellipsis break-words line-clamp-2">{m}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Apply from previous TP */}
@@ -315,15 +366,20 @@ export default function TestEvaluation({
                 </label>
                 <div className="relative">
                   <select
-                    defaultValue=""
+                    value={appliedFromTp != null ? String(appliedFromTp) : ''}
                     onChange={(e) => {
-                      const tp = Number(e.target.value);
-                      if (tp) applyFrom(tp);
-                      e.target.value = '';
+                      const val = e.target.value;
+                      if (val === 'empty') {
+                        clearEvaluation();
+                      } else {
+                        const tp = Number(val);
+                        if (tp) applyFrom(tp);
+                      }
                     }}
                     className="h-9 appearance-none rounded-lg border border-tusas-border bg-tusas-bg pl-3 pr-8 py-1 text-sm text-tusas-text outline-none transition-colors focus:border-tusas-blue"
                   >
                     <option value="" disabled>Select Test Point</option>
+                    <option value="empty">Empty (Clear All)</option>
                     {completedOtherTPs.map((tp) => (
                       <option key={tp} value={tp}>
                         TP {tp}{evaluations[tp]?.maneuver ? ` — ${getManeuverAbbr(evaluations[tp].maneuver!)}` : ''}

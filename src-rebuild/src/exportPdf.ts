@@ -95,6 +95,12 @@ export function exportToPdf({
   const colCount = headers.length;
   const colW = (pageW - 2 * margin) / colCount;
 
+  const pioIdx = 2;
+  const chrIdx = 3;
+  const handlingStartIdx = 4;
+  const handlingEndIdx = 4 + HANDLING_CRITERIA.length - 1;
+  const dynStartIdx = handlingEndIdx + 1;
+
   const wrapText = (text: string, width: number): string[] =>
     doc.splitTextToSize(String(text ?? 'N/A'), width - 2);
 
@@ -134,8 +140,23 @@ export function exportToPdf({
   const drawRow = (cells: string[], y: number, h: number, bold = false, boldFirstCol = false) => {
     let x = margin;
     cells.forEach((cell, idx) => {
-      doc.setDrawColor(180);
+      const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
+      const isPioChr = idx === pioIdx || idx === chrIdx;
+      const isDynamic = idx >= dynStartIdx;
+      if (isHandling) {
+        doc.setFillColor(180, 220, 180);
+        doc.rect(x, y, colW, h, 'F');
+      } else if (isPioChr) {
+        doc.setFillColor(200, 215, 240);
+        doc.rect(x, y, colW, h, 'F');
+      } else if (isDynamic) {
+        doc.setFillColor(245, 200, 155);
+        doc.rect(x, y, colW, h, 'F');
+      }
+      doc.setDrawColor(80);
+      doc.setLineWidth(0.2);
       doc.rect(x, y, colW, h);
+      doc.setLineWidth(0.2);
       const isBold = bold || (boldFirstCol && idx === 0);
       drawCell(cell, x, y, colW, h, isBold);
       x += colW;
@@ -146,9 +167,24 @@ export function exportToPdf({
     let x = margin;
     doc.setFontSize(fontSize);
     doc.setFont('helvetica', 'bold');
-    cells.forEach((cell) => {
-      doc.setDrawColor(180);
+    cells.forEach((cell, idx) => {
+      const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
+      const isPioChr = idx === pioIdx || idx === chrIdx;
+      const isDynamic = idx >= dynStartIdx;
+      if (isHandling) {
+        doc.setFillColor(150, 200, 150);
+        doc.rect(x, y, colW, h, 'F');
+      } else if (isPioChr) {
+        doc.setFillColor(170, 195, 230);
+        doc.rect(x, y, colW, h, 'F');
+      } else if (isDynamic) {
+        doc.setFillColor(230, 175, 120);
+        doc.rect(x, y, colW, h, 'F');
+      }
+      doc.setDrawColor(80);
+      doc.setLineWidth(0.2);
       doc.rect(x, y, colW, h);
+      doc.setLineWidth(0.2);
       doc.saveGraphicsState();
       const textX = x + colW / 2 + 1.5;
       const textY = y + h - 2;
@@ -190,6 +226,38 @@ export function exportToPdf({
   doc.text(maneuverText, margin, 22);
 
   let curY = 24 + maneuverText.length * 6;
+
+  // Legend
+  const legendY = curY;
+  const legendBoxSize = 3;
+  const legendGap = 4;
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+
+  const legendSpacing = (pageW - 2 * margin) / 3;
+
+  const legend1X = margin;
+  doc.setFillColor(170, 195, 230);
+  doc.rect(legend1X, legendY, legendBoxSize, legendBoxSize, 'F');
+  doc.setDrawColor(100);
+  doc.rect(legend1X, legendY, legendBoxSize, legendBoxSize);
+  doc.text('PIO & CHR Ratings', legend1X + legendBoxSize + 1.5, legendY + 2.5);
+
+  const legend2X = margin + legendSpacing;
+  doc.setFillColor(150, 200, 150);
+  doc.rect(legend2X, legendY, legendBoxSize, legendBoxSize, 'F');
+  doc.setDrawColor(100);
+  doc.rect(legend2X, legendY, legendBoxSize, legendBoxSize);
+  doc.text('Standard Handling Qualities Criteria', legend2X + legendBoxSize + 1.5, legendY + 2.5);
+
+  const legend3X = margin + legendSpacing * 2;
+  doc.setFillColor(230, 175, 120);
+  doc.rect(legend3X, legendY, legendBoxSize, legendBoxSize, 'F');
+  doc.setDrawColor(100);
+  doc.rect(legend3X, legendY, legendBoxSize, legendBoxSize);
+  doc.text('Maneuver-Specific Criteria', legend3X + legendBoxSize + 1.5, legendY + 2.5);
+
+  curY += legendBoxSize + legendGap;
 
   // Header row with vertical text
   const headerH = 25;
@@ -304,6 +372,143 @@ export function exportToPdf({
       
       curY += commentH;
     }
+  });
+
+  // ── Narrative Summary Section ──
+  doc.addPage('l');
+  curY = margin;
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Narrative Summary', margin, curY + 5);
+  curY += 12;
+
+  const narFontSize = 8;
+  const narLineH = 4.5;
+  const narWidth = pageW - 2 * margin;
+
+  const writeNarrativeParagraph = (text: string, bold = false) => {
+    const safeText = toPdfSafe(text);
+    const lines: string[] = doc.splitTextToSize(safeText, narWidth);
+    const blockH = lines.length * narLineH + 2;
+
+    if (curY + blockH > pageH - margin) {
+      doc.addPage('l');
+      curY = margin;
+    }
+
+    doc.setFontSize(narFontSize);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    lines.forEach((line: string) => {
+      doc.text(line, margin, curY + narLineH);
+      curY += narLineH;
+    });
+    curY += 2;
+  };
+
+  const writeNarrativeHeading = (text: string) => {
+    const safeText = toPdfSafe(text);
+    if (curY + 10 > pageH - margin) {
+      doc.addPage('l');
+      curY = margin;
+    }
+    doc.setFontSize(narFontSize + 1);
+    doc.setFont('helvetica', 'bold');
+    doc.text(safeText, margin, curY + narLineH);
+    curY += narLineH + 1;
+
+    doc.setDrawColor(160);
+    doc.setLineWidth(0.3);
+    doc.line(margin, curY, margin + narWidth, curY);
+    curY += 3;
+  };
+
+  allTps.forEach((tp) => {
+    const tpData = evaluations[tp];
+    const isCancelled = cancelled.includes(tp);
+    const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
+    const maneuverName = tpData?.maneuver || 'N/A';
+    const dynCriteria = getManeuverCriteria(tpData?.maneuver ?? null);
+    const comments = tpData?.comments ?? {};
+    const generalComment = tpData?.generalComment ?? '';
+
+    writeNarrativeHeading(`Test Point ${tp} — ${maneuverName}${isCancelled ? ' (Cancelled)' : ''}`);
+
+    if (isCancelled) {
+      curY += 3;
+      return;
+    }
+
+    const pioVal = ev.pio != null ? Number(ev.pio) : null;
+    const chrVal = ev.chr != null ? Number(ev.chr) : null;
+    const pioStr = pioVal != null ? String(pioVal) : 'N/A';
+    const chrStr = chrVal != null ? String(chrVal) : 'N/A';
+
+    const pioComment = comments.pio?.trim();
+    const chrComment = comments.chr?.trim();
+    let ratingLine =
+      `The pilot evaluated the ${maneuverName} maneuver with a PIO rating of ${pioStr}`;
+    if (pioComment) ratingLine += ` ("${pioComment}")`;
+    ratingLine += ` and a Cooper-Harper rating of ${chrStr}`;
+    if (chrComment) ratingLine += ` ("${chrComment}")`;
+    ratingLine += '.';
+    writeNarrativeParagraph(ratingLine);
+
+    const handlingParts: string[] = [];
+    const handlingNA: string[] = [];
+    HANDLING_CRITERIA.forEach((c) => {
+      const raw = ev[c.id as keyof Evaluation];
+      if (raw == null || String(raw) === 'N/A') {
+        handlingNA.push(c.label);
+        return;
+      }
+      const label = resolvePdfLabel(c, raw);
+      const cmt = comments[c.id]?.trim();
+      let part = `${c.label} was assessed as ${label}`;
+      if (cmt) part += ` ("${cmt}")`;
+      handlingParts.push(part);
+    });
+    if (handlingParts.length > 0) {
+      let handlingText = `Handling Qualities: ${handlingParts.join('. ')}.`;
+      if (handlingNA.length > 0) {
+        handlingText += ` No assessment was provided for ${handlingNA.join(', ')}.`;
+      }
+      writeNarrativeParagraph(handlingText);
+    } else if (handlingNA.length > 0) {
+      writeNarrativeParagraph(`Handling Qualities: No assessment was provided for ${handlingNA.join(', ')}.`);
+    }
+
+    const dynParts: string[] = [];
+    const dynNA: string[] = [];
+    dynCriteria.forEach((c) => {
+      const raw = ev[c.id];
+      if (raw == null || String(raw) === 'N/A') {
+        dynNA.push(c.label);
+        return;
+      }
+      const label = resolvePdfLabel(c, raw);
+      const cmt = comments[c.id]?.trim();
+      let part = `${c.label} was assessed as ${label}`;
+      if (cmt) part += ` ("${cmt}")`;
+      dynParts.push(part);
+    });
+    if (dynParts.length > 0) {
+      let dynText = `Maneuver-Specific Assessment: ${dynParts.join('. ')}.`;
+      if (dynNA.length > 0) {
+        dynText += ` No assessment was provided for ${dynNA.join(', ')}.`;
+      }
+      writeNarrativeParagraph(dynText);
+    } else if (dynNA.length > 0) {
+      writeNarrativeParagraph(`Maneuver-Specific Assessment: No assessment was provided for ${dynNA.join(', ')}.`);
+    }
+
+    if (generalComment?.trim()) {
+      writeNarrativeParagraph(
+        `Moreover, the pilot indicated the following: ${generalComment.trim()}.`
+      );
+    }
+
+    curY += 3;
   });
 
   doc.save(filename);

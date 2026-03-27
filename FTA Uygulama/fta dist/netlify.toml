@@ -1,0 +1,5 @@
+# SPA: tum yollar index.html'e yonlendir (Page not found cozumu)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
