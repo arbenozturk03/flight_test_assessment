@@ -375,11 +375,11 @@ export default function DecisionTreeRating({
   const renderBreadcrumb = () => {
     if (breadcrumb.length === 0) return null;
     return (
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-tusas-border/40 bg-tusas-bg/50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-lg border border-tusas-border/40 bg-tusas-bg/50 px-2.5 py-1.5">
         {breadcrumb.map((step, i) => (
           <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-tusas-muted/30" />}
-            <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-medium ${
+            {i > 0 && <ChevronRight className="h-3 w-3 text-tusas-muted/30" />}
+            <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium ${
               step.positive
                 ? 'bg-green-600/10 text-green-400'
                 : 'bg-red-600/10 text-red-400'
@@ -415,22 +415,35 @@ export default function DecisionTreeRating({
       </h4>
 
       <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => handleAnswer('Yes')}
-          className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 border-green-600 bg-green-600/10 text-base font-bold text-green-400 transition-all hover:bg-green-600 hover:text-white active:scale-[0.98]"
-        >
-          <Check className="h-5 w-5" />
-          Yes
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAnswer('No')}
-          className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 border-red-600 bg-red-600/10 text-base font-bold text-red-400 transition-all hover:bg-red-600 hover:text-white active:scale-[0.98]"
-        >
-          <span className="text-lg leading-none">✕</span>
-          No
-        </button>
+        {(() => {
+          const yesPositive = mode === 'chr';
+          const yesColor = yesPositive
+            ? 'border-green-600 bg-green-600/10 text-green-400 hover:bg-green-600'
+            : 'border-red-600 bg-red-600/10 text-red-400 hover:bg-red-600';
+          const noColor = yesPositive
+            ? 'border-red-600 bg-red-600/10 text-red-400 hover:bg-red-600'
+            : 'border-green-600 bg-green-600/10 text-green-400 hover:bg-green-600';
+          return (
+            <>
+              <button
+                type="button"
+                onClick={() => handleAnswer('Yes')}
+                className={`flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 text-base font-bold transition-all hover:text-white active:scale-[0.98] ${yesColor}`}
+              >
+                <Check className="h-5 w-5" />
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAnswer('No')}
+                className={`flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 text-base font-bold transition-all hover:text-white active:scale-[0.98] ${noColor}`}
+              >
+                <span className="text-lg leading-none">✕</span>
+                No
+              </button>
+            </>
+          );
+        })()}
       </div>
     </div>
   );
