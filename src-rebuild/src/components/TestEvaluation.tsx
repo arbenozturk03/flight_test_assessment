@@ -11,7 +11,7 @@ import {
   getMissingFieldIds,
 } from '../data';
 import OptionSelector from './OptionSelector';
-import RatingScale from './RatingScale';
+import DecisionTreeRating from './DecisionTreeRating';
 import GeneralEvaluationSummary from './GeneralEvaluationSummary';
 import TusasLogo from './TusasLogo';
 
@@ -394,11 +394,10 @@ export default function TestEvaluation({
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
               <>
-                {/* 1. Standard Panel */}
-                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                  {HANDLING_CRITERIA.map((c) => (
+                {/* 1. Trim (always on top, independent) */}
+                {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => (
+                  <section key={c.id} className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
                     <OptionSelector
-                      key={c.id}
                       label={c.label}
                       value={currentEval[c.id as keyof Evaluation] as string | null}
                       options={c.options}
@@ -407,10 +406,10 @@ export default function TestEvaluation({
                       comment={currentData?.comments?.[c.id] ?? ''}
                       onCommentChange={(t) => updateComment(c.id, t)}
                     />
-                  ))}
-                </section>
+                  </section>
+                ))}
 
-                {/* 2. Maneuver Criteria */}
+                {/* 2. Maneuver-Specific Criteria (changes per maneuver) */}
                 <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
                   {getManeuverCriteria(currentManeuver).map((c) => (
                     <OptionSelector
@@ -426,36 +425,39 @@ export default function TestEvaluation({
                   ))}
                 </section>
 
-                {/* 3. PIO & CHR ratings */}
-                <section className="space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                  <h3 className="text-base font-bold text-tusas-text">
+                {/* 3. General Handling Criteria (same for all maneuvers, excluding Trim) */}
+                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  {HANDLING_CRITERIA.filter((c) => c.id !== 'trim').map((c) => (
+                    <OptionSelector
+                      key={c.id}
+                      label={c.label}
+                      value={currentEval[c.id as keyof Evaluation] as string | null}
+                      options={c.options}
+                      onChange={(v) => updateField(c.id, v)}
+                      hasError={errorFieldIds.includes(c.id)}
+                      comment={currentData?.comments?.[c.id] ?? ''}
+                      onCommentChange={(t) => updateComment(c.id, t)}
+                    />
+                  ))}
+                </section>
+
+                {/* 3. PIO & CHR Decision Tree Ratings */}
+                <section className="rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  <h3 className="mb-4 text-base font-bold text-tusas-text">
                     Ratings
                   </h3>
-                  <RatingScale
-                    label="PIO (Pilot Induced Oscillation)"
-                    value={currentEval.pio}
-                    min={1}
-                    max={6}
-                    onChange={(v) => updateField('pio', v)}
-                    valueColors={(v) =>
-                      v <= 2 ? 'green' : v === 3 ? 'yellow' : v <= 5 ? 'orange' : 'red'
-                    }
-                    hasError={errorFieldIds.includes('pio')}
-                    comment={currentData?.comments?.pio ?? ''}
-                    onCommentChange={(t) => updateComment('pio', t)}
-                  />
-                  <RatingScale
-                    label="CHR (Cooper-Harper Rating)"
-                    value={currentEval.chr}
-                    min={1}
-                    max={10}
-                    onChange={(v) => updateField('chr', v)}
-                    valueColors={(v) =>
-                      v <= 3 ? 'green' : v <= 6 ? 'yellow' : v <= 9 ? 'orange' : 'red'
-                    }
-                    hasError={errorFieldIds.includes('chr')}
-                    comment={currentData?.comments?.chr ?? ''}
-                    onCommentChange={(t) => updateComment('chr', t)}
+                  <DecisionTreeRating
+                    key={currentTestPoint}
+                    pioValue={currentEval.pio}
+                    chrValue={currentEval.chr}
+                    onPioChange={(v) => updateField('pio', v)}
+                    onChrChange={(v) => updateField('chr', v)}
+                    pioHasError={errorFieldIds.includes('pio')}
+                    chrHasError={errorFieldIds.includes('chr')}
+                    pioComment={currentData?.comments?.pio ?? ''}
+                    chrComment={currentData?.comments?.chr ?? ''}
+                    onPioCommentChange={(t) => updateComment('pio', t)}
+                    onChrCommentChange={(t) => updateComment('chr', t)}
                   />
                 </section>
 
