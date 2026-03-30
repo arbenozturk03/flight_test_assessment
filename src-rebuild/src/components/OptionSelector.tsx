@@ -20,12 +20,20 @@ const BORDER_ACTIVE = [
   'border-red-500 bg-red-500 text-white',
 ];
 
-const ROW_COLORS = [
-  'bg-green-500/15',
-  'bg-lime-500/10',
-  'bg-yellow-500/10',
-  'bg-orange-500/10',
-  'bg-red-500/10',
+const BADGE_COLORS = [
+  'bg-green-600 text-white',
+  'bg-lime-500 text-gray-900',
+  'bg-yellow-500 text-gray-900',
+  'bg-orange-500 text-white',
+  'bg-red-500 text-white',
+];
+
+const LABEL_COLORS = [
+  'text-green-400',
+  'text-lime-400',
+  'text-yellow-400',
+  'text-orange-400',
+  'text-red-400',
 ];
 
 interface OptionSelectorProps {
@@ -79,9 +87,9 @@ export default function OptionSelector({
             type="button"
             onClick={() => setInfoOpen(true)}
             title={`Rating descriptions for ${label}`}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-tusas-blue/40 bg-tusas-blue/10 text-tusas-blue transition-colors hover:bg-tusas-blue/20"
+            className="ml-1 shrink-0 text-blue-400 transition-colors hover:text-blue-300"
           >
-            <Info className="h-3 w-3" />
+            <Info className="h-4.5 w-4.5" />
           </button>
         )}
       </div>
@@ -136,51 +144,47 @@ export default function OptionSelector({
       {/* Info Modal */}
       {infoOpen && ratingDescriptions && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setInfoOpen(false); }}
         >
           <div
             ref={modalRef}
-            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-tusas-border bg-tusas-surface shadow-2xl"
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#111827] shadow-2xl"
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-tusas-border bg-tusas-surface px-6 py-4">
-              <h3 className="text-lg font-bold text-tusas-text">{label} — Rating Descriptions</h3>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111827] px-6 py-4">
+              <h3 className="text-lg font-bold text-white">{label}</h3>
               <button
                 type="button"
                 onClick={() => setInfoOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-6">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b-2 border-tusas-border">
-                    <th className="px-3 py-2 text-left font-semibold text-tusas-muted w-16">Rating</th>
-                    <th className="px-3 py-2 text-left font-semibold text-tusas-muted w-36">Level</th>
-                    <th className="px-3 py-2 text-left font-semibold text-tusas-muted">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleOptions
-                    .slice()
-                    .reverse()
-                    .map((opt, idx) => {
-                      const desc = ratingDescriptions[opt];
-                      if (!desc) return null;
-                      const rowColor = ROW_COLORS[Math.min(idx, ROW_COLORS.length - 1)];
-                      return (
-                        <tr key={opt} className={`border-b border-tusas-border/50 ${rowColor}`}>
-                          <td className="px-3 py-3 text-center font-bold text-tusas-text">{opt}</td>
-                          <td className="px-3 py-3 font-semibold text-tusas-text">{desc.label}</td>
-                          <td className="px-3 py-3 text-tusas-text leading-relaxed">{desc.description}</td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+            <div className="divide-y divide-white/5">
+              {visibleOptions
+                .slice()
+                .reverse()
+                .map((opt, idx) => {
+                  const desc = ratingDescriptions[opt];
+                  if (!desc) return null;
+                  const badgeColor = BADGE_COLORS[Math.min(idx, BADGE_COLORS.length - 1)];
+                  const labelColor = LABEL_COLORS[Math.min(idx, LABEL_COLORS.length - 1)];
+                  return (
+                    <div key={opt} className="flex gap-4 px-6 py-4 transition-colors hover:bg-white/[0.03]">
+                      <div className="flex flex-col items-center gap-1 pt-0.5">
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${badgeColor}`}>
+                          {opt}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold ${labelColor}`}>{desc.label}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-gray-400">{desc.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
