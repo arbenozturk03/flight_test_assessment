@@ -1,5 +1,22 @@
 export const SKIP_VALUE = 'N/A';
 
+export interface RatingDescription {
+  label: string;
+  description: string;
+}
+
+export interface DecisionOption {
+  label: string;
+  next: DecisionNode | number;
+  sentiment?: 'positive' | 'negative';
+}
+
+export interface DecisionNode {
+  question: string;
+  context?: string;
+  options: DecisionOption[];
+}
+
 export interface QualitativeCriterion {
   id: string;
   label: string;
