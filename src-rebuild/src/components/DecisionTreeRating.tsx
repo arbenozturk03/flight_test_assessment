@@ -258,7 +258,7 @@ export default function DecisionTreeRating({
   pioComment, chrComment,
   onPioCommentChange, onChrCommentChange,
 }: DecisionTreeRatingProps) {
-  const [mode, setMode] = useState<Mode>('pio');
+  const [mode, setMode] = useState<Mode>('chr');
   const [inputMode, setInputMode] = useState<InputMode>('flowchart');
 
   const [pioNodeId, setPioNodeId] = useState(PIO_ROOT);
@@ -565,7 +565,7 @@ export default function DecisionTreeRating({
       <div className="flex items-center gap-3">
         {/* PIO / CHR tabs */}
         <div className="flex flex-1 items-center gap-1 rounded-lg bg-tusas-bg p-1">
-          {(['pio', 'chr'] as Mode[]).map((m) => {
+          {(['chr', 'pio'] as Mode[]).map((m) => {
             const active = mode === m;
             const mVal = m === 'pio' ? pioValue : chrValue;
             const mErr = m === 'pio' ? pioHasError : chrHasError;

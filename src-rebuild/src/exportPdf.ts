@@ -1,7 +1,9 @@
 /** PDF generated offline (jsPDF local, no CDN). doc.save() triggers download to device Downloads/Files. */
 import jsPDF from 'jspdf';
 import type { Evaluation, Evaluations } from './types';
-import { TRIM_CRITERION, HANDLING_CRITERIA, getManeuverCriteria, createDefaultEvaluation, resolvePdfLabel } from './data';
+import { HANDLING_CRITERIA, getManeuverCriteria, createDefaultEvaluation, resolvePdfLabel } from './data';
+import { buildNarrative, qualitySentiment } from './utils/narrativeBuilder';
+import type { NarrativeItem } from './utils/narrativeBuilder';
 
 interface ExportOptions {
   flightTestNumber: string;
@@ -84,25 +86,22 @@ export function exportToPdf({
   const maxDynCols = dynHeaderOrder.length;
   const dynHeaders = dynHeaderOrder.map((c) => c.label);
 
-  const headers = [
+  const staticHeaders = [
     'Test Point',
     'Maneuver',
     'CHR',
     'PIO',
-    TRIM_CRITERION.label,
-    ...dynHeaders,
     ...HANDLING_CRITERIA.map((c) => c.label),
   ];
+  const headers = [...staticHeaders, ...dynHeaders];
   const colCount = headers.length;
   const colW = (pageW - 2 * margin) / colCount;
 
   const chrIdx = 2;
   const pioIdx = 3;
-  const trimIdx = 4;
-  const dynStartIdx = 5;
-  const dynEndIdx = 5 + maxDynCols - 1;
-  const handlingStartIdx = dynEndIdx + 1;
-  const handlingEndIdx = handlingStartIdx + HANDLING_CRITERIA.length - 1;
+  const handlingStartIdx = 4;
+  const handlingEndIdx = 4 + HANDLING_CRITERIA.length - 1;
+  const dynStartIdx = handlingEndIdx + 1;
 
   const wrapText = (text: string, width: number): string[] =>
     doc.splitTextToSize(String(text ?? 'N/A'), width - 2);
@@ -145,14 +144,14 @@ export function exportToPdf({
     cells.forEach((cell, idx) => {
       const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
       const isPioChr = idx === pioIdx || idx === chrIdx;
-      const isTrimOrDynamic = idx === trimIdx || (idx >= dynStartIdx && idx <= dynEndIdx);
+      const isDynamic = idx >= dynStartIdx;
       if (isHandling) {
         doc.setFillColor(180, 220, 180);
         doc.rect(x, y, colW, h, 'F');
       } else if (isPioChr) {
         doc.setFillColor(200, 215, 240);
         doc.rect(x, y, colW, h, 'F');
-      } else if (isTrimOrDynamic) {
+      } else if (isDynamic) {
         doc.setFillColor(245, 200, 155);
         doc.rect(x, y, colW, h, 'F');
       }
@@ -173,14 +172,14 @@ export function exportToPdf({
     cells.forEach((cell, idx) => {
       const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
       const isPioChr = idx === pioIdx || idx === chrIdx;
-      const isTrimOrDynamic = idx === trimIdx || (idx >= dynStartIdx && idx <= dynEndIdx);
+      const isDynamic = idx >= dynStartIdx;
       if (isHandling) {
         doc.setFillColor(150, 200, 150);
         doc.rect(x, y, colW, h, 'F');
       } else if (isPioChr) {
         doc.setFillColor(170, 195, 230);
         doc.rect(x, y, colW, h, 'F');
-      } else if (isTrimOrDynamic) {
+      } else if (isDynamic) {
         doc.setFillColor(230, 175, 120);
         doc.rect(x, y, colW, h, 'F');
       }
@@ -230,29 +229,28 @@ export function exportToPdf({
 
   let curY = 24 + maneuverText.length * 6;
 
-  // Legend — positioned above respective column groups
+  // Legend (aligned above corresponding column groups)
   const legendY = curY;
   const legendBoxSize = 3;
   const legendGap = 4;
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
 
-  const legendItemGap = 1.5;
-  const centerLegend = (groupStartIdx: number, groupEndIdx: number, label: string, r: number, g: number, b: number) => {
-    const groupLeftX = margin + groupStartIdx * colW;
-    const groupMidX = groupLeftX + (groupEndIdx - groupStartIdx + 1) * colW / 2;
-    const totalW = legendBoxSize + legendItemGap + doc.getTextWidth(label);
-    const lx = groupMidX - totalW / 2;
-    doc.setFillColor(r, g, b);
+  const legendItems = [
+    { color: [170, 195, 230] as const, text: 'CHR & PIO Ratings', startCol: chrIdx, colSpan: 2 },
+    { color: [150, 200, 150] as const, text: 'Standard Handling Qualities Criteria', startCol: handlingStartIdx, colSpan: HANDLING_CRITERIA.length },
+    { color: [230, 175, 120] as const, text: 'Maneuver-Specific Criteria', startCol: dynStartIdx, colSpan: maxDynCols },
+  ];
+
+  legendItems.forEach((item) => {
+    const lx = margin + item.startCol * colW;
+
+    doc.setFillColor(item.color[0], item.color[1], item.color[2]);
     doc.rect(lx, legendY, legendBoxSize, legendBoxSize, 'F');
     doc.setDrawColor(100);
     doc.rect(lx, legendY, legendBoxSize, legendBoxSize);
-    doc.text(label, lx + legendBoxSize + legendItemGap, legendY + 2.5);
-  };
-
-  centerLegend(chrIdx, pioIdx, 'CHR & PIO Ratings', 170, 195, 230);
-  centerLegend(handlingStartIdx, handlingEndIdx, 'Standard Handling Qualities Criteria', 150, 200, 150);
-  centerLegend(trimIdx, dynEndIdx, 'Maneuver-Specific Criteria', 230, 175, 120);
+    doc.text(item.text, lx + legendBoxSize + 1.5, legendY + 2.5);
+  });
 
   curY += legendBoxSize + legendGap;
 
@@ -289,19 +287,16 @@ export function exportToPdf({
       }
     }
 
-    const trimCell = isCancelled ? cancelledVal : resolvePdfLabel(TRIM_CRITERION, ev[TRIM_CRITERION.id as keyof Evaluation]);
-
     const cells = [
       String(tp),
       maneuverName || 'N/A',
       isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
       isCancelled ? cancelledVal : String(ev.pio ?? 'N/A'),
-      trimCell,
-      ...dynCells,
       ...HANDLING_CRITERIA.map((c) => {
         if (isCancelled) return cancelledVal;
         return resolvePdfLabel(c, ev[c.id as keyof Evaluation]);
       }),
+      ...dynCells,
     ];
 
     const rowH = maxRowHeight(cells);
@@ -323,9 +318,8 @@ export function exportToPdf({
 
     // Criterion comments (before General Comment)
     const criterionLabelMap = new Map<string, string>([
-      [TRIM_CRITERION.id, TRIM_CRITERION.label],
-      ['pio', 'PIO'],
       ['chr', 'CHR'],
+      ['pio', 'PIO'],
       ...HANDLING_CRITERIA.map((c) => [c.id, c.label] as const),
       ...dynHeaderOrder.map((c) => [c.id, c.label] as const),
     ]);
@@ -388,22 +382,76 @@ export function exportToPdf({
   const narLineH = 4.5;
   const narWidth = pageW - 2 * margin;
 
-  const writeNarrativeParagraph = (text: string, bold = false) => {
+  interface RichSegment { text: string; bold: boolean }
+
+  /** Parse "<b>bold</b> normal" into segments */
+  const parseRichText = (raw: string): RichSegment[] => {
+    const segs: RichSegment[] = [];
+    const re = /<b>(.*?)<\/b>/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(raw)) !== null) {
+      if (m.index > last) segs.push({ text: raw.slice(last, m.index), bold: false });
+      segs.push({ text: m[1], bold: true });
+      last = m.index + m[0].length;
+    }
+    if (last < raw.length) segs.push({ text: raw.slice(last), bold: false });
+    return segs;
+  };
+
+  /** Split segments into words preserving bold attribute */
+  const segmentsToWords = (segs: RichSegment[]): RichSegment[] => {
+    const words: RichSegment[] = [];
+    for (const seg of segs) {
+      for (const part of seg.text.split(/( +)/)) {
+        if (part) words.push({ text: part, bold: seg.bold });
+      }
+    }
+    return words;
+  };
+
+  /**
+   * Render a paragraph with inline <b> bold support.
+   * Words are laid out left-to-right, wrapping at narWidth,
+   * switching jsPDF font style per-word.
+   */
+  const writeNarrativeParagraph = (text: string) => {
     const safeText = toPdfSafe(text);
-    const lines: string[] = doc.splitTextToSize(safeText, narWidth);
-    const blockH = lines.length * narLineH + 2;
+    const segments = parseRichText(safeText);
+    const words = segmentsToWords(segments);
+
+    // Estimate height: measure plain text line count for page-break logic
+    const plain = safeText.replace(/<\/?b>/g, '');
+    const estLines: string[] = doc.splitTextToSize(plain, narWidth);
+    const blockH = estLines.length * narLineH + 2;
 
     if (curY + blockH > pageH - margin) {
       doc.addPage('l');
       curY = margin;
     }
 
-    doc.setFontSize(narFontSize);
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    lines.forEach((line: string) => {
-      doc.text(line, margin, curY + narLineH);
-      curY += narLineH;
-    });
+    let curX = margin;
+    curY += narLineH;
+
+    for (const w of words) {
+      doc.setFontSize(narFontSize);
+      doc.setFont('helvetica', w.bold ? 'bold' : 'normal');
+      const wW = doc.getTextWidth(w.text);
+
+      if (curX + wW > margin + narWidth && curX > margin) {
+        curX = margin;
+        curY += narLineH;
+
+        if (curY > pageH - margin) {
+          doc.addPage('l');
+          curY = margin + narLineH;
+        }
+      }
+
+      doc.text(w.text, curX, curY);
+      curX += wW;
+    }
+
     curY += 2;
   };
 
@@ -440,91 +488,46 @@ export function exportToPdf({
       return;
     }
 
-    // 1. Trim (first)
-    const trimRaw = ev[TRIM_CRITERION.id as keyof Evaluation];
-    if (trimRaw != null && String(trimRaw) !== 'N/A') {
-      const trimLabel = resolvePdfLabel(TRIM_CRITERION, trimRaw);
-      const trimCmt = comments[TRIM_CRITERION.id]?.trim();
-      let trimLine = `Trim was assessed as ${trimLabel}`;
-      if (trimCmt) trimLine += ` ("${trimCmt}")`;
-      trimLine += '.';
-      writeNarrativeParagraph(trimLine);
-    } else {
-      writeNarrativeParagraph('Trim: No assessment was provided.');
-    }
+    const pioVal = ev.pio != null ? Number(ev.pio) : null;
+    const chrVal = ev.chr != null ? Number(ev.chr) : null;
 
-    // 2. Maneuver-Specific (second)
-    const dynParts: string[] = [];
-    const dynNA: string[] = [];
-    dynCriteria.forEach((c) => {
-      const raw = ev[c.id];
-      if (raw == null || String(raw) === 'N/A') {
-        dynNA.push(c.label);
-        return;
-      }
-      const label = resolvePdfLabel(c, raw);
-      const cmt = comments[c.id]?.trim();
-      let part = `${c.label} was assessed as ${label}`;
-      if (cmt) part += ` ("${cmt}")`;
-      dynParts.push(part);
-    });
-    if (dynParts.length > 0) {
-      let dynText = `Maneuver-Specific Assessment: ${dynParts.join('. ')}.`;
-      if (dynNA.length > 0) {
-        dynText += ` No assessment was provided for ${dynNA.join(', ')}.`;
-      }
-      writeNarrativeParagraph(dynText);
-    } else if (dynNA.length > 0) {
-      writeNarrativeParagraph(`Maneuver-Specific Assessment: No assessment was provided for ${dynNA.join(', ')}.`);
-    }
+    const toNarrItem = (c: { id: string; label: string; pdfLabels?: Record<string, string> }, raw: string | number | null | undefined): NarrativeItem | null => {
+      if (raw == null || String(raw) === 'N/A') return null;
+      const v = Number(raw);
+      const pdfLabel = c.pdfLabels?.[String(raw)] ?? String(raw);
+      return { id: c.id, label: c.label, pdfLabel, value: v, sentiment: qualitySentiment(v) };
+    };
 
-    // 3. Standard Handling Qualities (third)
-    const handlingParts: string[] = [];
+    const handlingItems: NarrativeItem[] = [];
     const handlingNA: string[] = [];
     HANDLING_CRITERIA.forEach((c) => {
-      const raw = ev[c.id as keyof Evaluation];
-      if (raw == null || String(raw) === 'N/A') {
-        handlingNA.push(c.label);
-        return;
-      }
-      const label = resolvePdfLabel(c, raw);
-      const cmt = comments[c.id]?.trim();
-      let part = `${c.label} was assessed as ${label}`;
-      if (cmt) part += ` ("${cmt}")`;
-      handlingParts.push(part);
+      const item = toNarrItem(c, ev[c.id as keyof Evaluation]);
+      if (item) handlingItems.push(item);
+      else handlingNA.push(c.label);
     });
-    if (handlingParts.length > 0) {
-      let handlingText = `Handling Qualities: ${handlingParts.join('. ')}.`;
-      if (handlingNA.length > 0) {
-        handlingText += ` No assessment was provided for ${handlingNA.join(', ')}.`;
-      }
-      writeNarrativeParagraph(handlingText);
-    } else if (handlingNA.length > 0) {
-      writeNarrativeParagraph(`Handling Qualities: No assessment was provided for ${handlingNA.join(', ')}.`);
-    }
 
-    // 4. CHR & PIO (last)
-    const chrVal = ev.chr != null ? Number(ev.chr) : null;
-    const pioVal = ev.pio != null ? Number(ev.pio) : null;
-    const chrStr = chrVal != null ? String(chrVal) : 'N/A';
-    const pioStr = pioVal != null ? String(pioVal) : 'N/A';
+    const dynamicItems: NarrativeItem[] = [];
+    const dynamicNA: string[] = [];
+    dynCriteria.forEach((c) => {
+      const item = toNarrItem(c, ev[c.id]);
+      if (item) dynamicItems.push(item);
+      else dynamicNA.push(c.label);
+    });
 
-    const chrComment = comments.chr?.trim();
-    const pioComment = comments.pio?.trim();
-    let ratingLine =
-      `The pilot evaluated the ${maneuverName} maneuver with a Cooper-Harper rating of ${chrStr}`;
-    if (chrComment) ratingLine += ` ("${chrComment}")`;
-    ratingLine += ` and a PIO rating of ${pioStr}`;
-    if (pioComment) ratingLine += ` ("${pioComment}")`;
-    ratingLine += '.';
-    writeNarrativeParagraph(ratingLine);
+    const paragraphs = buildNarrative({
+      maneuverName,
+      tp,
+      chrValue: chrVal,
+      pioValue: pioVal,
+      handlingItems,
+      dynamicItems,
+      handlingNA,
+      dynamicNA,
+      comments,
+      generalComment,
+    });
 
-    if (generalComment?.trim()) {
-      writeNarrativeParagraph(
-        `Moreover, the pilot indicated the following: ${generalComment.trim()}.`
-      );
-    }
-
+    paragraphs.forEach((p) => writeNarrativeParagraph(p));
     curY += 3;
   });
 

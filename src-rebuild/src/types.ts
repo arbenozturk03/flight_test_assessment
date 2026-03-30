@@ -1,22 +1,5 @@
 export const SKIP_VALUE = 'N/A';
 
-export interface RatingDescription {
-  label: string;
-  description: string;
-}
-
-export interface DecisionOption {
-  label: string;
-  next: DecisionNode | number;
-  sentiment?: 'positive' | 'negative';
-}
-
-export interface DecisionNode {
-  question: string;
-  context?: string;
-  options: DecisionOption[];
-}
-
 export interface QualitativeCriterion {
   id: string;
   label: string;
@@ -25,8 +8,8 @@ export interface QualitativeCriterion {
   options: string[];
   /** Maps numeric rating ('1','3','5') to descriptive text for PDF export */
   pdfLabels?: Record<string, string>;
-  /** Detailed descriptions for each rating level, shown in info modal */
-  ratingDescriptions?: Record<string, RatingDescription>;
+  /** Maps numeric rating to detailed paragraph description for info popup */
+  longDescriptions?: Record<string, string>;
 }
 
 export interface Evaluation {

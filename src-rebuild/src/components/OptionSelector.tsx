@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { Info, X } from 'lucide-react';
+import { useState } from 'react';
+import { Info, X, Check } from 'lucide-react';
 import { SKIP_VALUE } from '../types';
-import type { RatingDescription } from '../types';
-import { DebouncedInput } from './DebouncedInput';
+
+/* Color arrays: index 0 = rating '1' (best/green) … index 4 = rating '5' (worst/red) */
 
 const BORDER_INACTIVE = [
   'border-green-500 text-green-400 hover:bg-green-500/10',
@@ -20,15 +20,40 @@ const BORDER_ACTIVE = [
   'border-red-500 bg-red-500 text-white',
 ];
 
-const BADGE_COLORS = [
-  'bg-green-600 text-white',
+/* Popup badge colors: index 0 = top item (best), index 4 = bottom item (worst) */
+const POPUP_BADGE = [
+  'bg-green-500 text-white',
   'bg-lime-500 text-gray-900',
   'bg-yellow-500 text-gray-900',
   'bg-orange-500 text-white',
   'bg-red-500 text-white',
 ];
 
-const LABEL_COLORS = [
+const POPUP_LABEL = [
+  'text-green-400',
+  'text-lime-400',
+  'text-yellow-400',
+  'text-orange-400',
+  'text-red-400',
+];
+
+const SELECTED_BORDER = [
+  'border-l-green-500',
+  'border-l-lime-500',
+  'border-l-yellow-500',
+  'border-l-orange-500',
+  'border-l-red-500',
+];
+
+const SELECTED_BG = [
+  'bg-green-500/8',
+  'bg-lime-500/8',
+  'bg-yellow-500/8',
+  'bg-orange-500/8',
+  'bg-red-500/8',
+];
+
+const CHECK_COLOR = [
   'text-green-400',
   'text-lime-400',
   'text-yellow-400',
@@ -44,7 +69,8 @@ interface OptionSelectorProps {
   hasError?: boolean;
   comment?: string;
   onCommentChange?: (text: string) => void;
-  ratingDescriptions?: Record<string, RatingDescription>;
+  pdfLabels?: Record<string, string>;
+  longDescriptions?: Record<string, string>;
 }
 
 export default function OptionSelector({
@@ -55,21 +81,12 @@ export default function OptionSelector({
   hasError,
   comment,
   onCommentChange,
-  ratingDescriptions,
+  pdfLabels,
+  longDescriptions,
 }: OptionSelectorProps) {
   const [infoOpen, setInfoOpen] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!infoOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setInfoOpen(false);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [infoOpen]);
-
   const visibleOptions = options.filter((o) => o !== SKIP_VALUE);
+  const hasInfo = longDescriptions && Object.keys(longDescriptions).length > 0;
   const wrapperErr = hasError
     ? 'rounded-lg border-2 border-red-600 bg-red-500/10 p-3'
     : '';
@@ -82,18 +99,17 @@ export default function OptionSelector({
         >
           {label}
         </label>
-        {ratingDescriptions && (
+        {hasInfo && (
           <button
             type="button"
             onClick={() => setInfoOpen(true)}
-            title={`Rating descriptions for ${label}`}
-            className="ml-1 shrink-0 text-blue-400 transition-colors hover:text-blue-300"
+            className="text-blue-500 transition-colors hover:text-blue-400"
+            title={`${label} rating descriptions`}
           >
-            <Info className="h-4.5 w-4.5" />
+            <Info className="h-5 w-5" strokeWidth={2.5} />
           </button>
         )}
       </div>
-
       <div className="flex flex-nowrap items-stretch gap-2 min-w-0 overflow-hidden">
         {visibleOptions.map((opt, idx) => {
           const selected = value === opt;
@@ -131,60 +147,68 @@ export default function OptionSelector({
       </div>
       <div className="mt-2">
         <label className="mb-1 block text-xs font-medium text-tusas-muted">Comment</label>
-        <DebouncedInput
+        <input
           type="text"
           placeholder="Add a comment for this rating..."
           value={comment ?? ''}
-          onValueChange={(t) => onCommentChange?.(t)}
+          onChange={(e) => onCommentChange?.(e.target.value)}
           disabled={onCommentChange === undefined}
           className="w-full rounded-lg border border-tusas-border bg-tusas-bg px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue disabled:opacity-50"
         />
       </div>
 
-      {/* Info Modal */}
-      {infoOpen && ratingDescriptions && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setInfoOpen(false); }}
-        >
+      {/* Info popup modal */}
+      {infoOpen && hasInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setInfoOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            ref={modalRef}
-            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#111827] shadow-2xl"
+            className="relative w-full max-w-[700px] rounded-xl border border-[#1e293b] bg-[#111827] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111827] px-6 py-4">
-              <h3 className="text-lg font-bold text-white">{label}</h3>
+            <div className="flex items-center justify-between border-b border-[#1e293b] px-7 py-5">
+              <h3 className="text-xl font-semibold text-white">{label}</h3>
               <button
                 type="button"
                 onClick={() => setInfoOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="text-slate-400 transition-colors hover:text-white"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="divide-y divide-white/5">
-              {visibleOptions
-                .slice()
-                .reverse()
-                .map((opt, idx) => {
-                  const desc = ratingDescriptions[opt];
-                  if (!desc) return null;
-                  const badgeColor = BADGE_COLORS[Math.min(idx, BADGE_COLORS.length - 1)];
-                  const labelColor = LABEL_COLORS[Math.min(idx, LABEL_COLORS.length - 1)];
-                  return (
-                    <div key={opt} className="flex gap-4 px-6 py-4 transition-colors hover:bg-white/[0.03]">
-                      <div className="flex flex-col items-center gap-1 pt-0.5">
-                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${badgeColor}`}>
+            <div className="divide-y divide-[#1e293b]">
+              {visibleOptions.map((opt, idx) => {
+                const colorIdx = Math.min(idx, POPUP_BADGE.length - 1);
+                const shortLabel = pdfLabels?.[opt] ?? '';
+                const longDesc = longDescriptions?.[opt] ?? '';
+                if (!shortLabel && !longDesc) return null;
+                const isSelected = opt === value;
+                return (
+                  <div key={opt} className={`px-7 py-4 transition-colors ${isSelected ? `${SELECTED_BG[colorIdx]} border-l-[3px] ${SELECTED_BORDER[colorIdx]}` : 'hover:bg-[#181e2d]'}`}>
+                    <div className="flex gap-3.5">
+                      <div className="flex items-start pt-px">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold ${POPUP_BADGE[colorIdx]}`}>
                           {opt}
                         </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-semibold ${labelColor}`}>{desc.label}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-gray-400">{desc.description}</p>
+                      <div className="min-w-0 -mt-px flex-1">
+                        <span className={`block text-[15px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}>
+                          {shortLabel}
+                        </span>
+                        {longDesc && (
+                          <p className="mt-0.5 text-[14px] leading-relaxed text-slate-400">
+                            {longDesc}
+                          </p>
+                        )}
                       </div>
+                      {isSelected && (
+                        <div className="flex items-center self-stretch">
+                          <Check className={`h-5 w-5 shrink-0 ${CHECK_COLOR[colorIdx]}`} strokeWidth={3} />
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Play, ArrowLeft } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Play, ArrowLeft, Check } from 'lucide-react';
 import { MANEUVER_LIST, FTE_LIST, TP_LIST, FTE_FIRST_IN_DROPDOWN } from '../data';
 import ManeuverButton from './ManeuverButton';
 import MultiSelectDropdown from './MultiSelectDropdown';
@@ -49,6 +49,41 @@ export default function ManeuverSetup({
   useEffect(() => {
     if (canProceed) setAttemptedStart(false);
   }, [canProceed]);
+
+  interface Snapshot {
+    maneuvers: string[];
+    ftes: string[];
+    tps: string[];
+    tpCount: number | null;
+    ftn: string;
+  }
+  const snapshotRef = useRef<Snapshot | null>(null);
+
+  useEffect(() => {
+    if (isEditingManeuvers) {
+      snapshotRef.current = {
+        maneuvers: [...selected],
+        ftes: [...selectedFTEs],
+        tps: [...selectedTPs],
+        tpCount: testPointCount,
+        ftn: flightTestNumber,
+      };
+    } else {
+      snapshotRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditingManeuvers]);
+
+  const isDirty = (() => {
+    const s = snapshotRef.current;
+    if (!s || !isEditingManeuvers) return false;
+    if (s.ftn !== flightTestNumber) return true;
+    if (s.tpCount !== testPointCount) return true;
+    if (s.maneuvers.length !== selected.length || !s.maneuvers.every((m) => selected.includes(m))) return true;
+    if (s.ftes.length !== selectedFTEs.length || !s.ftes.every((f) => selectedFTEs.includes(f))) return true;
+    if (s.tps.length !== selectedTPs.length || !s.tps.every((t) => selectedTPs.includes(t))) return true;
+    return false;
+  })();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -172,14 +207,27 @@ export default function ManeuverSetup({
               type="button"
               onClick={onReturnToTest}
               disabled={!canProceed}
-              className={`flex min-h-[56px] items-center justify-center gap-2 rounded-lg border-2 border-[#003366] px-8 py-3 font-semibold text-[#003366] transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-                canProceed
-                  ? 'bg-tusas-surface hover:bg-tusas-bg'
-                  : 'bg-tusas-surface text-tusas-muted'
+              className={`flex min-h-[56px] items-center justify-center gap-2 rounded-lg border-2 px-8 py-3 font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                isDirty
+                  ? canProceed
+                    ? 'border-green-600 bg-green-600 text-white hover:bg-green-500 hover:border-green-500'
+                    : 'border-green-600/50 bg-green-600/50 text-white/70'
+                  : canProceed
+                    ? 'border-[#003366] bg-tusas-surface text-[#003366] hover:bg-tusas-bg'
+                    : 'border-[#003366]/50 bg-tusas-surface text-tusas-muted'
               }`}
             >
-              <ArrowLeft className="h-5 w-5" />
-              Return to Test
+              {isDirty ? (
+                <>
+                  <Check className="h-5 w-5" />
+                  Save &amp; Return
+                </>
+              ) : (
+                <>
+                  <ArrowLeft className="h-5 w-5" />
+                  Return to Test
+                </>
+              )}
             </button>
           )}
 
