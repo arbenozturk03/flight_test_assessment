@@ -1,8 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { Check, ChevronDown, ChevronUp, CircleX, ClipboardList, Copy, Download, Pencil, RefreshCw } from 'lucide-react';
 import type { Evaluation, Evaluations, TestPointData } from '../types';
+import { DebouncedTextarea } from './DebouncedInput';
 import {
+  TRIM_CRITERION,
   HANDLING_CRITERIA,
+  PIO_DESCRIPTIONS,
+  CHR_DESCRIPTIONS,
+  PIO_DECISION_TREE,
+  CHR_DECISION_TREE,
+  PIO_TOTAL_STEPS,
+  CHR_TOTAL_STEPS,
   getManeuverCriteria,
   getManeuverAbbr,
   createDefaultEvaluation,
@@ -11,7 +19,7 @@ import {
   getMissingFieldIds,
 } from '../data';
 import OptionSelector from './OptionSelector';
-import RatingScale from './RatingScale';
+import RatingsPanel from './RatingsPanel';
 import GeneralEvaluationSummary from './GeneralEvaluationSummary';
 import TusasLogo from './TusasLogo';
 
@@ -394,23 +402,22 @@ export default function TestEvaluation({
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
               <>
-                {/* 1. Standard Panel */}
+                {/* 1. Trim */}
                 <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                  {HANDLING_CRITERIA.map((c) => (
-                    <OptionSelector
-                      key={c.id}
-                      label={c.label}
-                      value={currentEval[c.id as keyof Evaluation] as string | null}
-                      options={c.options}
-                      onChange={(v) => updateField(c.id, v)}
-                      hasError={errorFieldIds.includes(c.id)}
-                      comment={currentData?.comments?.[c.id] ?? ''}
-                      onCommentChange={(t) => updateComment(c.id, t)}
-                    />
-                  ))}
+                  <OptionSelector
+                    key={TRIM_CRITERION.id}
+                    label={TRIM_CRITERION.label}
+                    value={currentEval[TRIM_CRITERION.id as keyof Evaluation] as string | null}
+                    options={TRIM_CRITERION.options}
+                    onChange={(v) => updateField(TRIM_CRITERION.id, v)}
+                    hasError={errorFieldIds.includes(TRIM_CRITERION.id)}
+                    comment={currentData?.comments?.[TRIM_CRITERION.id] ?? ''}
+                    onCommentChange={(t) => updateComment(TRIM_CRITERION.id, t)}
+                    ratingDescriptions={TRIM_CRITERION.ratingDescriptions}
+                  />
                 </section>
 
-                {/* 2. Maneuver Criteria */}
+                {/* 2. Maneuver-Specific Criteria */}
                 <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
                   {getManeuverCriteria(currentManeuver).map((c) => (
                     <OptionSelector
@@ -422,52 +429,77 @@ export default function TestEvaluation({
                       hasError={errorFieldIds.includes(c.id)}
                       comment={currentData?.comments?.[c.id] ?? ''}
                       onCommentChange={(t) => updateComment(c.id, t)}
+                      ratingDescriptions={c.ratingDescriptions}
                     />
                   ))}
                 </section>
 
-                {/* 3. PIO & CHR ratings */}
-                <section className="space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                  <h3 className="text-base font-bold text-tusas-text">
-                    Ratings
-                  </h3>
-                  <RatingScale
-                    label="PIO (Pilot Induced Oscillation)"
-                    value={currentEval.pio}
-                    min={1}
-                    max={6}
-                    onChange={(v) => updateField('pio', v)}
-                    valueColors={(v) =>
-                      v <= 2 ? 'green' : v === 3 ? 'yellow' : v <= 5 ? 'orange' : 'red'
-                    }
-                    hasError={errorFieldIds.includes('pio')}
-                    comment={currentData?.comments?.pio ?? ''}
-                    onCommentChange={(t) => updateComment('pio', t)}
-                  />
-                  <RatingScale
-                    label="CHR (Cooper-Harper Rating)"
-                    value={currentEval.chr}
-                    min={1}
-                    max={10}
-                    onChange={(v) => updateField('chr', v)}
-                    valueColors={(v) =>
-                      v <= 3 ? 'green' : v <= 6 ? 'yellow' : v <= 9 ? 'orange' : 'red'
-                    }
-                    hasError={errorFieldIds.includes('chr')}
-                    comment={currentData?.comments?.chr ?? ''}
-                    onCommentChange={(t) => updateComment('chr', t)}
-                  />
+                {/* 3. Standard Handling Qualities */}
+                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  {HANDLING_CRITERIA.map((c) => (
+                    <OptionSelector
+                      key={c.id}
+                      label={c.label}
+                      value={currentEval[c.id as keyof Evaluation] as string | null}
+                      options={c.options}
+                      onChange={(v) => updateField(c.id, v)}
+                      hasError={errorFieldIds.includes(c.id)}
+                      comment={currentData?.comments?.[c.id] ?? ''}
+                      onCommentChange={(t) => updateComment(c.id, t)}
+                      ratingDescriptions={c.ratingDescriptions}
+                    />
+                  ))}
                 </section>
+
+                {/* 4. CHR & PIO ratings */}
+                <RatingsPanel
+                  ratings={[
+                    {
+                      id: 'chr',
+                      label: 'CHR (Cooper-Harper Rating)',
+                      tabLabel: 'Cooper-Harper (CHR)',
+                      value: currentEval.chr,
+                      onChange: (v) => updateField('chr', v),
+                      min: 1,
+                      max: 10,
+                      valueColors: (v) =>
+                        v <= 3 ? 'green' : v <= 6 ? 'yellow' : v <= 9 ? 'orange' : 'red',
+                      descriptions: CHR_DESCRIPTIONS,
+                      decisionTree: CHR_DECISION_TREE,
+                      totalSteps: CHR_TOTAL_STEPS,
+                      hasError: errorFieldIds.includes('chr'),
+                      comment: currentData?.comments?.chr ?? '',
+                      onCommentChange: (t) => updateComment('chr', t),
+                    },
+                    {
+                      id: 'pio',
+                      label: 'PIO (Pilot Induced Oscillation)',
+                      tabLabel: 'PIO Rating',
+                      value: currentEval.pio,
+                      onChange: (v) => updateField('pio', v),
+                      min: 1,
+                      max: 6,
+                      valueColors: (v) =>
+                        v <= 2 ? 'green' : v === 3 ? 'yellow' : v <= 5 ? 'orange' : 'red',
+                      descriptions: PIO_DESCRIPTIONS,
+                      decisionTree: PIO_DECISION_TREE,
+                      totalSteps: PIO_TOTAL_STEPS,
+                      hasError: errorFieldIds.includes('pio'),
+                      comment: currentData?.comments?.pio ?? '',
+                      onCommentChange: (t) => updateComment('pio', t),
+                    },
+                  ]}
+                />
 
                 {/* 4. General Maneuver Comments (bottom) */}
                 <section className="rounded-lg border border-tusas-border bg-tusas-surface p-6">
                   <h3 className="mb-3 text-base font-bold text-tusas-text">
                     General Maneuver Comments
                   </h3>
-                  <textarea
+                  <DebouncedTextarea
                     placeholder="Enter general comments for this maneuver..."
                     value={currentGeneralComment}
-                    onChange={(e) => updateGeneralComment(e.target.value)}
+                    onValueChange={updateGeneralComment}
                     rows={3}
                     className="w-full rounded-lg border border-tusas-border bg-tusas-bg px-4 py-3 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue"
                   />
