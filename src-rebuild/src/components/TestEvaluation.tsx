@@ -394,10 +394,11 @@ export default function TestEvaluation({
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
               <>
-                {/* 1. Trim (always on top, independent) */}
-                {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => (
-                  <section key={c.id} className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                {/* 1. Trim + Maneuver-Specific + General Handling Criteria */}
+                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => (
                     <OptionSelector
+                      key={c.id}
                       label={c.label}
                       value={currentEval[c.id as keyof Evaluation] as string | null}
                       options={c.options}
@@ -408,11 +409,7 @@ export default function TestEvaluation({
                       pdfLabels={c.pdfLabels}
                       longDescriptions={c.longDescriptions}
                     />
-                  </section>
-                ))}
-
-                {/* 2. Maneuver-Specific Criteria (changes per maneuver) */}
-                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  ))}
                   {getManeuverCriteria(currentManeuver).map((c) => (
                     <OptionSelector
                       key={c.id}
@@ -427,10 +424,6 @@ export default function TestEvaluation({
                       longDescriptions={c.longDescriptions}
                     />
                   ))}
-                </section>
-
-                {/* 3. General Handling Criteria (same for all maneuvers, excluding Trim) */}
-                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
                   {HANDLING_CRITERIA.filter((c) => c.id !== 'trim').map((c) => (
                     <OptionSelector
                       key={c.id}

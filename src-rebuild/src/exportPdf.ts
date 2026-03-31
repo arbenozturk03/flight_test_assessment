@@ -86,22 +86,28 @@ export function exportToPdf({
   const maxDynCols = dynHeaderOrder.length;
   const dynHeaders = dynHeaderOrder.map((c) => c.label);
 
-  const staticHeaders = [
+  const trimCriterion = HANDLING_CRITERIA.find((c) => c.id === 'trim')!;
+  const handlingWithoutTrim = HANDLING_CRITERIA.filter((c) => c.id !== 'trim');
+
+  const headers = [
     'Test Point',
     'Maneuver',
+    trimCriterion.label,
+    ...dynHeaders,
+    ...handlingWithoutTrim.map((c) => c.label),
     'CHR',
     'PIO',
-    ...HANDLING_CRITERIA.map((c) => c.label),
   ];
-  const headers = [...staticHeaders, ...dynHeaders];
   const colCount = headers.length;
   const colW = (pageW - 2 * margin) / colCount;
 
-  const chrIdx = 2;
-  const pioIdx = 3;
-  const handlingStartIdx = 4;
-  const handlingEndIdx = 4 + HANDLING_CRITERIA.length - 1;
-  const dynStartIdx = handlingEndIdx + 1;
+  const trimIdx = 2;
+  const dynStartIdx = 3;
+  const dynEndIdx = 3 + maxDynCols - 1;
+  const handlingStartIdx = dynEndIdx + 1;
+  const handlingEndIdx = handlingStartIdx + handlingWithoutTrim.length - 1;
+  const chrIdx = handlingEndIdx + 1;
+  const pioIdx = chrIdx + 1;
 
   const wrapText = (text: string, width: number): string[] =>
     doc.splitTextToSize(String(text ?? 'N/A'), width - 2);
@@ -122,6 +128,7 @@ export function exportToPdf({
     w: number,
     h: number,
     bold = false,
+    textRGB?: [number, number, number],
   ) => {
     doc.setFontSize(fontSize);
     const parts = text.split('\n');
@@ -130,9 +137,11 @@ export function exportToPdf({
     parts.forEach((part, i) => {
       const isSubHeader = parts.length > 1 && i === 0;
       doc.setFont('helvetica', bold || isSubHeader ? 'bold' : 'normal');
+      if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
       const wrapped = doc.splitTextToSize(part, w - 2);
       wrapped.slice(0, maxLines - lineIdx).forEach((line: string) => {
         if (lineIdx >= maxLines) return;
+        if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
         doc.text(line, x + 1, y + 4 + lineIdx * lineH);
         lineIdx++;
       });
@@ -142,27 +151,38 @@ export function exportToPdf({
   const drawRow = (cells: string[], y: number, h: number, bold = false, boldFirstCol = false) => {
     let x = margin;
     cells.forEach((cell, idx) => {
+      const isTestPointOrManeuver = idx === 0 || idx === 1;
+      const isTrim = idx === trimIdx;
+      const isDynamic = idx >= dynStartIdx && idx <= dynEndIdx;
       const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
       const isPioChr = idx === pioIdx || idx === chrIdx;
-      const isDynamic = idx >= dynStartIdx;
-      if (isHandling) {
-        doc.setFillColor(180, 220, 180);
-        doc.rect(x, y, colW, h, 'F');
+
+      const isActionPhase = isTrim || isDynamic;
+
+      if (isTestPointOrManeuver) {
+        doc.setFillColor(248, 249, 250);
+      } else if (isActionPhase) {
+        doc.setFillColor(210, 215, 220);
+      } else if (isHandling) {
+        doc.setFillColor(173, 181, 189);
       } else if (isPioChr) {
-        doc.setFillColor(200, 215, 240);
-        doc.rect(x, y, colW, h, 'F');
-      } else if (isDynamic) {
-        doc.setFillColor(245, 200, 155);
-        doc.rect(x, y, colW, h, 'F');
+        doc.setFillColor(95, 103, 112);
+      } else {
+        doc.setFillColor(255, 255, 255);
       }
-      doc.setDrawColor(80);
-      doc.setLineWidth(0.2);
+      doc.rect(x, y, colW, h, 'F');
+
+      doc.setDrawColor(isPioChr ? 50 : 90);
+      doc.setLineWidth(0.3);
       doc.rect(x, y, colW, h);
-      doc.setLineWidth(0.2);
-      const isBold = bold || (boldFirstCol && idx === 0);
-      drawCell(cell, x, y, colW, h, isBold);
+
+      const textRGB: [number, number, number] = isPioChr ? [255, 255, 255] : [30, 30, 30];
+      doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+      const isBold = bold || (boldFirstCol && idx === 0) || isPioChr;
+      drawCell(cell, x, y, colW, h, isBold, textRGB);
       x += colW;
     });
+    doc.setTextColor(0, 0, 0);
   };
 
   const drawVerticalHeaderRow = (cells: string[], y: number, h: number) => {
@@ -170,24 +190,35 @@ export function exportToPdf({
     doc.setFontSize(fontSize);
     doc.setFont('helvetica', 'bold');
     cells.forEach((cell, idx) => {
+      const isTestPointOrManeuver = idx === 0 || idx === 1;
+      const isTrim = idx === trimIdx;
+      const isDynamic = idx >= dynStartIdx && idx <= dynEndIdx;
       const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
       const isPioChr = idx === pioIdx || idx === chrIdx;
-      const isDynamic = idx >= dynStartIdx;
-      if (isHandling) {
-        doc.setFillColor(150, 200, 150);
-        doc.rect(x, y, colW, h, 'F');
+
+      const isActionPhase = isTrim || isDynamic;
+
+      if (isTestPointOrManeuver) {
+        doc.setFillColor(233, 236, 239);
+      } else if (isActionPhase) {
+        doc.setFillColor(178, 186, 194);
+      } else if (isHandling) {
+        doc.setFillColor(134, 142, 150);
       } else if (isPioChr) {
-        doc.setFillColor(170, 195, 230);
-        doc.rect(x, y, colW, h, 'F');
-      } else if (isDynamic) {
-        doc.setFillColor(230, 175, 120);
-        doc.rect(x, y, colW, h, 'F');
+        doc.setFillColor(75, 83, 92);
+      } else {
+        doc.setFillColor(240, 240, 240);
       }
-      doc.setDrawColor(80);
-      doc.setLineWidth(0.2);
+      doc.rect(x, y, colW, h, 'F');
+
+      doc.setDrawColor(isPioChr ? 40 : 90);
+      doc.setLineWidth(0.3);
       doc.rect(x, y, colW, h);
-      doc.setLineWidth(0.2);
+
+      const hdrTextRGB: [number, number, number] = (isPioChr || isHandling) ? [255, 255, 255] : [20, 20, 20];
+      doc.setTextColor(hdrTextRGB[0], hdrTextRGB[1], hdrTextRGB[2]);
       doc.saveGraphicsState();
+      doc.setTextColor(hdrTextRGB[0], hdrTextRGB[1], hdrTextRGB[2]);
       const textX = x + colW / 2 + 1.5;
       const textY = y + h - 2;
       doc.text(cell, textX, textY, { angle: 90, maxWidth: h - 4 });
@@ -227,32 +258,7 @@ export function exportToPdf({
   );
   doc.text(maneuverText, margin, 22);
 
-  let curY = 24 + maneuverText.length * 6;
-
-  // Legend (aligned above corresponding column groups)
-  const legendY = curY;
-  const legendBoxSize = 3;
-  const legendGap = 4;
-  doc.setFontSize(6);
-  doc.setFont('helvetica', 'normal');
-
-  const legendItems = [
-    { color: [170, 195, 230] as const, text: 'CHR & PIO Ratings', startCol: chrIdx, colSpan: 2 },
-    { color: [150, 200, 150] as const, text: 'Standard Handling Qualities Criteria', startCol: handlingStartIdx, colSpan: HANDLING_CRITERIA.length },
-    { color: [230, 175, 120] as const, text: 'Maneuver-Specific Criteria', startCol: dynStartIdx, colSpan: maxDynCols },
-  ];
-
-  legendItems.forEach((item) => {
-    const lx = margin + item.startCol * colW;
-
-    doc.setFillColor(item.color[0], item.color[1], item.color[2]);
-    doc.rect(lx, legendY, legendBoxSize, legendBoxSize, 'F');
-    doc.setDrawColor(100);
-    doc.rect(lx, legendY, legendBoxSize, legendBoxSize);
-    doc.text(item.text, lx + legendBoxSize + 1.5, legendY + 2.5);
-  });
-
-  curY += legendBoxSize + legendGap;
+  let curY = 24 + maneuverText.length * 6 + 2;
 
   // Header row with vertical text
   const headerH = 25;
@@ -287,16 +293,19 @@ export function exportToPdf({
       }
     }
 
+    const trimCell = isCancelled ? cancelledVal : resolvePdfLabel(trimCriterion, ev[trimCriterion.id as keyof Evaluation]);
+
     const cells = [
       String(tp),
       maneuverName || 'N/A',
-      isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
-      isCancelled ? cancelledVal : String(ev.pio ?? 'N/A'),
-      ...HANDLING_CRITERIA.map((c) => {
+      trimCell,
+      ...dynCells,
+      ...handlingWithoutTrim.map((c) => {
         if (isCancelled) return cancelledVal;
         return resolvePdfLabel(c, ev[c.id as keyof Evaluation]);
       }),
-      ...dynCells,
+      isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
+      isCancelled ? cancelledVal : String(ev.pio ?? 'N/A'),
     ];
 
     const rowH = maxRowHeight(cells);

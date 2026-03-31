@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { RotateCcw, ChevronRight, Check, MessageSquare, GitBranch, Hash } from 'lucide-react';
+import { RotateCcw, ChevronRight, MessageSquare, GitBranch, Hash } from 'lucide-react';
 import { SKIP_VALUE } from '../types';
 
 /* ────────────────────────────────────────────
@@ -251,38 +251,28 @@ interface DecisionTreeRatingProps {
   onChrCommentChange: (t: string) => void;
 }
 
-export default function DecisionTreeRating({
-  pioValue, chrValue,
-  onPioChange, onChrChange,
-  pioHasError, chrHasError,
-  pioComment, chrComment,
-  onPioCommentChange, onChrCommentChange,
-}: DecisionTreeRatingProps) {
-  const [mode, setMode] = useState<Mode>('chr');
+function SingleRating({ mode, value, onChange, hasError, comment, onCommentChange }: {
+  mode: Mode;
+  value: number | string | null;
+  onChange: (v: number | string | null) => void;
+  hasError: boolean;
+  comment: string;
+  onCommentChange: (t: string) => void;
+}) {
   const [inputMode, setInputMode] = useState<InputMode>('flowchart');
-
-  const [pioNodeId, setPioNodeId] = useState(PIO_ROOT);
-  const [chrNodeId, setChrNodeId] = useState(CHR_ROOT);
-  const [pioBreadcrumb, setPioBreadcrumb] = useState<BreadcrumbStep[]>([]);
-  const [chrBreadcrumb, setChrBreadcrumb] = useState<BreadcrumbStep[]>([]);
+  const [nodeId, setNodeId] = useState(mode === 'pio' ? PIO_ROOT : CHR_ROOT);
+  const [breadcrumb, setBreadcrumb] = useState<BreadcrumbStep[]>([]);
   const [animKey, setAnimKey] = useState(0);
   const [commentOpen, setCommentOpen] = useState(false);
 
-  const nodes    = mode === 'pio' ? PIO_NODES : CHR_NODES;
-  const rootId   = mode === 'pio' ? PIO_ROOT  : CHR_ROOT;
-  const currentNodeId    = mode === 'pio' ? pioNodeId : chrNodeId;
-  const setCurrentNodeId = mode === 'pio' ? setPioNodeId : setChrNodeId;
-  const breadcrumb       = mode === 'pio' ? pioBreadcrumb : chrBreadcrumb;
-  const setBreadcrumb    = mode === 'pio' ? setPioBreadcrumb : setChrBreadcrumb;
-  const value            = mode === 'pio' ? pioValue : chrValue;
-  const onChange         = mode === 'pio' ? onPioChange : onChrChange;
-  const hasError         = mode === 'pio' ? pioHasError : chrHasError;
-  const comment          = mode === 'pio' ? pioComment : chrComment;
-  const onCommentChange  = mode === 'pio' ? onPioCommentChange : onChrCommentChange;
-  const ratingInfo       = mode === 'pio' ? PIO_RATING_INFO : CHR_RATING_INFO;
-  const severityFn       = mode === 'pio' ? pioSeverity : chrSeverity;
-  const ratingMin        = 1;
-  const ratingMax        = mode === 'pio' ? 6 : 10;
+  const nodes = mode === 'pio' ? PIO_NODES : CHR_NODES;
+  const rootId = mode === 'pio' ? PIO_ROOT : CHR_ROOT;
+  const currentNodeId = nodeId;
+  const setCurrentNodeId = setNodeId;
+  const ratingInfo = mode === 'pio' ? PIO_RATING_INFO : CHR_RATING_INFO;
+  const severityFn = mode === 'pio' ? pioSeverity : chrSeverity;
+  const ratingMin = 1;
+  const ratingMax = mode === 'pio' ? 6 : 10;
 
   const currentNode   = nodes[currentNodeId];
   const numericValue   = typeof value === 'number' ? value : null;
@@ -415,35 +405,20 @@ export default function DecisionTreeRating({
       </h4>
 
       <div className="flex gap-3">
-        {(() => {
-          const yesPositive = mode === 'chr';
-          const yesColor = yesPositive
-            ? 'border-green-600 bg-green-600/10 text-green-400 hover:bg-green-600'
-            : 'border-red-600 bg-red-600/10 text-red-400 hover:bg-red-600';
-          const noColor = yesPositive
-            ? 'border-red-600 bg-red-600/10 text-red-400 hover:bg-red-600'
-            : 'border-green-600 bg-green-600/10 text-green-400 hover:bg-green-600';
-          return (
-            <>
-              <button
-                type="button"
-                onClick={() => handleAnswer('Yes')}
-                className={`flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 text-base font-bold transition-all hover:text-white active:scale-[0.98] ${yesColor}`}
-              >
-                <Check className="h-5 w-5" />
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAnswer('No')}
-                className={`flex h-14 flex-1 items-center justify-center gap-2.5 rounded-xl border-2 text-base font-bold transition-all hover:text-white active:scale-[0.98] ${noColor}`}
-              >
-                <span className="text-lg leading-none">✕</span>
-                No
-              </button>
-            </>
-          );
-        })()}
+        <button
+          type="button"
+          onClick={() => handleAnswer('Yes')}
+          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-tusas-border bg-tusas-bg text-base font-bold text-tusas-text transition-all hover:border-tusas-blue hover:bg-tusas-blue/10 active:scale-[0.98]"
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          onClick={() => handleAnswer('No')}
+          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-tusas-border bg-tusas-bg text-base font-bold text-tusas-text transition-all hover:border-tusas-blue hover:bg-tusas-blue/10 active:scale-[0.98]"
+        >
+          No
+        </button>
       </div>
     </div>
   );
@@ -555,49 +530,22 @@ export default function DecisionTreeRating({
   const isComplete = numericValue != null || isSkip;
   const showResetBtn = inputMode === 'flowchart' && (!isAtRoot || breadcrumb.length > 0);
 
-  /* ═══════════════════════════════════════════
-     Main render
-     ═══════════════════════════════════════════ */
+  const title = mode === 'chr' ? 'Cooper-Harper (CHR)' : 'PIO Rating';
+  const badgeVal = numericValue != null ? numericValue : null;
+  const badgeSev = badgeVal != null ? severityFn(badgeVal) : null;
 
   return (
-    <div className={`space-y-5 ${hasError ? 'rounded-xl border-2 border-red-600 bg-red-500/10 p-4' : ''}`}>
-      {/* Header row: PIO/CHR tabs + Flowchart/Direct toggle */}
-      <div className="flex items-center gap-3">
-        {/* PIO / CHR tabs */}
-        <div className="flex flex-1 items-center gap-1 rounded-lg bg-tusas-bg p-1">
-          {(['chr', 'pio'] as Mode[]).map((m) => {
-            const active = mode === m;
-            const mVal = m === 'pio' ? pioValue : chrValue;
-            const mErr = m === 'pio' ? pioHasError : chrHasError;
-            const label = m === 'pio' ? 'PIO Rating' : 'Cooper-Harper (CHR)';
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`relative flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-semibold transition-all ${
-                  active
-                    ? 'bg-[#003366] text-white shadow-sm'
-                    : 'text-tusas-muted hover:text-tusas-text'
-                } ${mErr && !active ? 'text-red-400' : ''}`}
-              >
-                {label}
-                {mVal != null && typeof mVal === 'number' && (
-                  <span className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
-                    active ? 'bg-white/20 text-white' : SEVERITY_BADGE[(m === 'pio' ? pioSeverity : chrSeverity)(mVal)]
-                  }`}>
-                    {mVal}
-                  </span>
-                )}
-                {mErr && (
-                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" />
-                )}
-              </button>
-            );
-          })}
+    <div className={`space-y-4 ${hasError ? 'rounded-xl border-2 border-red-600 bg-red-500/10 p-4' : ''}`}>
+      {/* Header: title + badge + Flowchart/Direct toggle */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <h4 className="text-sm font-bold text-tusas-text">{title}</h4>
+          {badgeVal != null && badgeSev && (
+            <span className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${SEVERITY_BADGE[badgeSev]}`}>
+              {badgeVal}
+            </span>
+          )}
         </div>
-
-        {/* Flowchart / Direct toggle */}
         <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
           <button
             type="button"
@@ -632,7 +580,7 @@ export default function DecisionTreeRating({
       {inputMode === 'flowchart' && renderBreadcrumb()}
 
       {/* Content area */}
-      <div className={inputMode === 'flowchart' ? 'min-h-[140px]' : ''}>
+      <div className={inputMode === 'flowchart' ? 'min-h-[120px]' : ''}>
         {inputMode === 'direct' ? renderDirect() : renderFlowchartContent()}
       </div>
 
@@ -672,6 +620,40 @@ export default function DecisionTreeRating({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════
+   Main exported component — renders CHR then PIO stacked
+   ════════════════════════════════════════════ */
+
+export default function DecisionTreeRating({
+  pioValue, chrValue,
+  onPioChange, onChrChange,
+  pioHasError, chrHasError,
+  pioComment, chrComment,
+  onPioCommentChange, onChrCommentChange,
+}: DecisionTreeRatingProps) {
+  return (
+    <div className="space-y-8">
+      <SingleRating
+        mode="chr"
+        value={chrValue}
+        onChange={onChrChange}
+        hasError={chrHasError}
+        comment={chrComment}
+        onCommentChange={onChrCommentChange}
+      />
+      <div className="border-t border-tusas-border" />
+      <SingleRating
+        mode="pio"
+        value={pioValue}
+        onChange={onPioChange}
+        hasError={pioHasError}
+        comment={pioComment}
+        onCommentChange={onPioCommentChange}
+      />
     </div>
   );
 }
