@@ -115,161 +115,108 @@ function wasWere(count: number): string {
   return count === 1 ? 'was' : 'were';
 }
 
-function chunks<T>(arr: T[], n: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-  return out;
+
+/* ─── Unified sequential section builder ── */
+
+type TaggedItem = { item: NarrativeItem; type: 'handling' | 'dynamic' };
+
+function hPhrase(t: TaggedItem): string {
+  return phrase(t.item);
 }
 
-/* ─── Handling: chunked positive sentences (max 2 per sentence) ── */
-
-function posHandlingChunk(items: NarrativeItem[], isFirst: boolean, idx: number): string {
-  const ww = wasWere(items.length);
-
-  if (isFirst) {
-    if (items.length === 2) {
-      return `According to the pilot's assessment, ${phrase(items[0])} and ${phrase(items[1])} ${ww} observed.`;
-    }
-    return `According to the pilot's assessment, ${phrase(items[0])} was observed.`;
-  }
-
-  const transitions = [
-    (a: string, b: string) => `Additionally, ${a} was noted alongside ${b}.`,
-    (a: string, b: string) => `Furthermore, ${a} and ${b} were also reported.`,
-    (a: string, b: string) => `Coupled with this, ${a} was identified along with ${b}.`,
-  ];
-  const singles = [
-    (a: string) => `Additionally, ${a} was also noted.`,
-    (a: string) => `Furthermore, ${a} was reported.`,
-    (a: string) => `In terms of control qualities, ${a} was also identified.`,
-  ];
-
-  if (items.length === 2) {
-    return pick(transitions, idx)(phrase(items[0]), phrase(items[1]));
-  }
-  return pick(singles, idx)(phrase(items[0]));
+function dDescribed(t: TaggedItem): string {
+  return `the ${t.item.label.toLowerCase()} was ${t.item.pdfLabel.toLowerCase()}`;
 }
 
-/* ─── Handling: chunked negative sentences ───────────────── */
+const posContinuations = ['Furthermore', 'Additionally', 'Coupled with this'];
+const negContinuations = ['Furthermore', 'Additionally'];
+const posToNegBridges = ['However', 'Nevertheless', 'On the other hand'];
+const negToPosBridges = ['Despite these concerns', 'Nonetheless', 'On the positive side'];
 
-function negHandlingChunk(items: NarrativeItem[], isFirst: boolean, hasPositiveContext: boolean, idx: number): string {
-  const str = joinList(items.map(phrase));
-  const ww = wasWere(items.length);
-
-  if (isFirst) {
-    if (hasPositiveContext) {
-      const bridges = [
-        `Nevertheless, difficulties were reported regarding ${str}.`,
-        `However, concerns were noted regarding ${str}.`,
-        `On the other hand, ${str} ${ww} identified as a deficiency.`,
-      ];
-      return pick(bridges, idx);
-    }
-    return `Difficulties were reported regarding ${str}.`;
-  }
-
-  const conts = [
-    `Coupled with this, ${str} ${ww} also identified as a concern.`,
-    `Additionally, ${str} ${ww} noted as a deficiency.`,
-  ];
-  return pick(conts, idx);
-}
-
-/* ─── Dynamic: chunked positive sentences ────────────────── */
-
-function dynPosChunk(items: NarrativeItem[], isFirst: boolean, idx: number): string {
-  if (items.length === 2) {
-    const a = items[0], b = items[1];
-    if (isFirst) {
-      return `In the pilot's assessment, the ${a.label.toLowerCase()} was described as ${a.pdfLabel.toLowerCase()}, while the ${b.label.toLowerCase()} was ${b.pdfLabel.toLowerCase()}.`;
-    }
-    const conts = [
-      `Furthermore, the ${a.label.toLowerCase()} was characterized as ${a.pdfLabel.toLowerCase()}, and the ${b.label.toLowerCase()} as ${b.pdfLabel.toLowerCase()}.`,
-      `Additionally, the ${a.label.toLowerCase()} phase exhibited ${a.pdfLabel.toLowerCase()} characteristics, while the ${b.label.toLowerCase()} was ${b.pdfLabel.toLowerCase()}.`,
-    ];
-    return pick(conts, idx);
-  }
-
-  const item = items[0];
-  if (isFirst) {
-    return `In the pilot's assessment, the ${item.label.toLowerCase()} was described as ${item.pdfLabel.toLowerCase()}.`;
-  }
-  const conts = [
-    `Furthermore, the ${item.label.toLowerCase()} phase exhibited ${item.pdfLabel.toLowerCase()} characteristics.`,
-    `Additionally, the ${item.label.toLowerCase()} was characterized as ${item.pdfLabel.toLowerCase()}.`,
-  ];
-  return pick(conts, idx);
-}
-
-/* ─── Dynamic: chunked negative sentences ────────────────── */
-
-function dynNegChunk(items: NarrativeItem[], isFirst: boolean, hasPositiveContext: boolean, idx: number): string {
-  if (items.length === 2) {
-    const a = items[0], b = items[1];
-    const opener = isFirst && hasPositiveContext ? 'However' : isFirst ? 'In the pilot\'s assessment' : 'Additionally';
-    return `${opener}, the ${a.label.toLowerCase()} was characterized by ${a.pdfLabel.toLowerCase()} response, and the ${b.label.toLowerCase()} by ${b.pdfLabel.toLowerCase()} response.`;
-  }
-
-  const item = items[0];
-  if (isFirst && hasPositiveContext) {
-    return `However, the ${item.label.toLowerCase()} was characterized by ${item.pdfLabel.toLowerCase()} response.`;
-  }
-  if (isFirst) {
-    return `In the pilot's assessment, the ${item.label.toLowerCase()} was characterized by ${item.pdfLabel.toLowerCase()} response.`;
-  }
-  const conts = [
-    `Coupled with this, the ${item.label.toLowerCase()} exhibited ${item.pdfLabel.toLowerCase()} response.`,
-    `Additionally, the ${item.label.toLowerCase()} was characterized by ${item.pdfLabel.toLowerCase()} response.`,
-  ];
-  return pick(conts, idx);
-}
-
-/* ─── Section builders (chunked, max 2 traits per sentence) ── */
-
-function buildHandlingSection(
-  positive: NarrativeItem[],
-  negative: NarrativeItem[],
+function buildUnifiedSection(
+  allItems: TaggedItem[],
   compItem: NarrativeItem | undefined,
   workloadItem: NarrativeItem | undefined,
-  _seed: number,
 ): string {
+  if (allItems.length === 0 && !compItem && !workloadItem) return '';
+
   const sentences: string[] = [];
+  let prevNeg: boolean | null = null;
+  let isFirst = true;
+  let ci = 0;
+  let i = 0;
 
-  const posChunks = chunks(positive, 2);
-  posChunks.forEach((ch, i) => {
-    sentences.push(posHandlingChunk(ch, i === 0, i));
-  });
+  while (i < allItems.length) {
+    const cur = allItems[i];
+    const curNeg = cur.item.sentiment === 'negative';
+    const next = allItems[i + 1];
+    const canPair = next
+      && next.type === cur.type
+      && (next.item.sentiment === 'negative') === curNeg;
 
-  const negChunks = chunks(negative, 2);
-  negChunks.forEach((ch, i) => {
-    sentences.push(negHandlingChunk(ch, i === 0, posChunks.length > 0, i));
-  });
+    const flipped = prevNeg !== null && prevNeg !== curNeg;
 
-  const trailingSentiment: 'positive' | 'negative' | 'none' =
-    negChunks.length > 0 ? 'negative' : posChunks.length > 0 ? 'positive' : 'none';
+    if (canPair) {
+      const a = cur, b = next!;
+      i += 2;
 
-  const resultSentence = buildResultSentence(compItem, workloadItem, trailingSentiment);
-  if (resultSentence) sentences.push(resultSentence);
+      if (cur.type === 'dynamic') {
+        if (isFirst) {
+          sentences.push(`According to the pilot's assessment, ${dDescribed(a)}, while ${dDescribed(b)}.`);
+        } else if (flipped && curNeg) {
+          sentences.push(`${pick(posToNegBridges, ci)}, ${dDescribed(a)}, and ${dDescribed(b)}.`);
+        } else if (flipped && !curNeg) {
+          sentences.push(`${pick(negToPosBridges, ci)}, ${dDescribed(a)}, while ${dDescribed(b)}.`);
+        } else {
+          sentences.push(`${pick(curNeg ? negContinuations : posContinuations, ci)}, ${dDescribed(a)}, and ${dDescribed(b)}.`);
+        }
+      } else {
+        const ww = wasWere(2);
+        if (isFirst) {
+          sentences.push(`According to the pilot's assessment, ${hPhrase(a)} and ${hPhrase(b)} ${ww} observed.`);
+        } else if (flipped && curNeg) {
+          sentences.push(`${pick(posToNegBridges, ci)}, difficulties were reported regarding ${hPhrase(a)} and ${hPhrase(b)}.`);
+        } else if (flipped && !curNeg) {
+          sentences.push(`${pick(negToPosBridges, ci)}, ${hPhrase(a)} and ${hPhrase(b)} ${ww} noted.`);
+        } else {
+          sentences.push(`${pick(curNeg ? negContinuations : posContinuations, ci)}, ${hPhrase(a)} and ${hPhrase(b)} ${ww} also reported.`);
+        }
+      }
+    } else {
+      i += 1;
 
-  return sentences.join(' ');
-}
+      if (cur.type === 'dynamic') {
+        if (isFirst) {
+          sentences.push(`According to the pilot's assessment, ${dDescribed(cur)}.`);
+        } else if (flipped && curNeg) {
+          sentences.push(`${pick(posToNegBridges, ci)}, the ${cur.item.label.toLowerCase()} was characterized by ${cur.item.pdfLabel.toLowerCase()} response.`);
+        } else if (flipped && !curNeg) {
+          sentences.push(`${pick(negToPosBridges, ci)}, ${dDescribed(cur)}.`);
+        } else {
+          sentences.push(`${pick(curNeg ? negContinuations : posContinuations, ci)}, ${dDescribed(cur)}.`);
+        }
+      } else {
+        if (isFirst) {
+          sentences.push(`According to the pilot's assessment, ${hPhrase(cur)} was observed.`);
+        } else if (flipped && curNeg) {
+          sentences.push(`${pick(posToNegBridges, ci)}, difficulties were reported regarding ${hPhrase(cur)}.`);
+        } else if (flipped && !curNeg) {
+          sentences.push(`${pick(negToPosBridges, ci)}, ${hPhrase(cur)} was noted.`);
+        } else {
+          sentences.push(`${pick(curNeg ? negContinuations : posContinuations, ci)}, ${hPhrase(cur)} was also reported.`);
+        }
+      }
+    }
 
-function buildDynamicSection(
-  positive: NarrativeItem[],
-  negative: NarrativeItem[],
-  _seed: number,
-): string {
-  const sentences: string[] = [];
+    prevNeg = curNeg;
+    isFirst = false;
+    ci++;
+  }
 
-  const posChunks = chunks(positive, 2);
-  posChunks.forEach((ch, i) => {
-    sentences.push(dynPosChunk(ch, i === 0, i));
-  });
-
-  const negChunks = chunks(negative, 2);
-  negChunks.forEach((ch, i) => {
-    sentences.push(dynNegChunk(ch, i === 0, posChunks.length > 0, i));
-  });
+  const trail: 'positive' | 'negative' | 'none' =
+    prevNeg === true ? 'negative' : prevNeg === false ? 'positive' : 'none';
+  const res = buildResultSentence(compItem, workloadItem, trail);
+  if (res) sentences.push(res);
 
   return sentences.join(' ');
 }
@@ -278,10 +225,46 @@ function buildDynamicSection(
 
 export function buildNarrative(input: NarrativeInput): string[] {
   const out: string[] = [];
-  const seed = input.tp;
   const comments = input.comments;
 
-  /* ── Part 1 — Executive Summary ── */
+  /* ── Part 1 — Unified assessment (Trim → Dynamics → Handling) ── */
+
+  const trimItem = input.handlingItems.find((i) => i.id === 'trim');
+  const handlingNoTrim = input.handlingItems.filter((i) => i.id !== 'trim');
+  const workloadItem = handlingNoTrim.find((i) => i.id === 'workload');
+  const compItem = handlingNoTrim.find((i) => i.id === 'pilotCompensation');
+  const traitItems = handlingNoTrim.filter(
+    (i) => i.id !== 'workload' && i.id !== 'pilotCompensation',
+  );
+
+  const allItems: TaggedItem[] = [];
+  if (trimItem) allItems.push({ item: trimItem, type: 'handling' });
+  input.dynamicItems.forEach((item) => allItems.push({ item, type: 'dynamic' }));
+  traitItems.forEach((item) => allItems.push({ item, type: 'handling' }));
+
+  if (allItems.length > 0 || workloadItem || compItem) {
+    const para = buildUnifiedSection(allItems, compItem, workloadItem);
+    if (para) out.push(para);
+  }
+
+  const allEvalItems = [
+    ...(trimItem ? [trimItem] : []),
+    ...input.dynamicItems,
+    ...handlingNoTrim,
+  ];
+  const evalRemarks = allEvalItems
+    .filter((i) => comments[i.id]?.trim())
+    .map((i) => `${i.label}: "${comments[i.id].trim()}"`);
+  if (evalRemarks.length > 0) {
+    out.push(`The pilot additionally remarked — ${evalRemarks.join('; ')}.`);
+  }
+
+  const allNA = [...input.handlingNA, ...input.dynamicNA];
+  if (allNA.length > 0) {
+    out.push(`No assessment was provided for ${joinList(allNA)}.`);
+  }
+
+  /* ── Part 4 — CHR & PIO Final Ratings ── */
 
   const ratingParts: string[] = [];
   if (input.chrValue != null) {
@@ -297,8 +280,7 @@ export function buildNarrative(input: NarrativeInput): string[] {
     const chrCmt = comments.chr?.trim();
     const pioCmt = comments.pio?.trim();
 
-    let exec = `The pilot evaluated the ${input.maneuverName} maneuver with ${ratingParts.join(' and ')}${overallClause(cSent, pSent)}`;
-    out.push(exec);
+    out.push(`Based on the above observations, the pilot assigned ${ratingParts.join(' and ')}${overallClause(cSent, pSent)}`);
 
     if (chrCmt || pioCmt) {
       const parts: string[] = [];
@@ -306,52 +288,6 @@ export function buildNarrative(input: NarrativeInput): string[] {
       if (pioCmt) parts.push(`on PIO: "${pioCmt}"`);
       out.push(`The pilot commented ${joinList(parts)}.`);
     }
-  }
-
-  /* ── Part 2 — Handling Qualities ── */
-
-  const workloadItem = input.handlingItems.find((i) => i.id === 'workload');
-  const compItem = input.handlingItems.find((i) => i.id === 'pilotCompensation');
-  const traitItems = input.handlingItems.filter(
-    (i) => i.id !== 'workload' && i.id !== 'pilotCompensation',
-  );
-
-  if (traitItems.length > 0 || workloadItem || compItem) {
-    const pos = traitItems.filter((i) => i.sentiment !== 'negative');
-    const neg = traitItems.filter((i) => i.sentiment === 'negative');
-    const para = buildHandlingSection(pos, neg, compItem, workloadItem, seed);
-    if (para) out.push(para);
-  }
-
-  const handlingRemarks = input.handlingItems
-    .filter((i) => comments[i.id]?.trim())
-    .map((i) => `${i.label}: "${comments[i.id].trim()}"`);
-  if (handlingRemarks.length > 0) {
-    out.push(`The pilot additionally remarked — ${handlingRemarks.join('; ')}.`);
-  }
-
-  if (input.handlingNA.length > 0) {
-    out.push(`No assessment was provided for ${joinList(input.handlingNA)}.`);
-  }
-
-  /* ── Part 3 — Maneuver-Specific Dynamics ── */
-
-  if (input.dynamicItems.length > 0) {
-    const pos = input.dynamicItems.filter((i) => i.sentiment !== 'negative');
-    const neg = input.dynamicItems.filter((i) => i.sentiment === 'negative');
-    const para = buildDynamicSection(pos, neg, seed + 1);
-    if (para) out.push(para);
-
-    const dynRemarks = input.dynamicItems
-      .filter((i) => comments[i.id]?.trim())
-      .map((i) => `${i.label}: "${comments[i.id].trim()}"`);
-    if (dynRemarks.length > 0) {
-      out.push(`The pilot additionally remarked — ${dynRemarks.join('; ')}.`);
-    }
-  }
-
-  if (input.dynamicNA.length > 0) {
-    out.push(`No assessment was provided for ${joinList(input.dynamicNA)}.`);
   }
 
   /* ── General comment ── */
