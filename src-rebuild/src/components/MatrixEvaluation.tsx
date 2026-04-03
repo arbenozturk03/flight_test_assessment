@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Info, X, Check } from 'lucide-react';
+import { Info, X, Check, MessageSquare } from 'lucide-react';
 import type { QualitativeCriterion } from '../types';
 import { SKIP_VALUE } from '../types';
 
@@ -167,6 +167,7 @@ export default function MatrixEvaluation({
   scrollContainerRef,
 }: MatrixEvaluationProps) {
   const [infoOpen, setInfoOpen] = useState<string | null>(null);
+  const [expandedComment, setExpandedComment] = useState<string | null>(null);
   /** Open scale + `fixed` viewport coords (updated on scroll so the panel stays under the cell). */
   const [activeCell, setActiveCell] = useState<{
     row: string;
@@ -283,6 +284,7 @@ export default function MatrixEvaluation({
           </thead>
           <tbody>
             {handlingCriteria.map((criterion, rowIdx) => {
+              const isCommentOpen = expandedComment === criterion.id;
               const comment = getComment(criterion.id);
               const hasAnyError = phases.some((p) =>
                 errorCellKeys.has(`${criterion.id}__${p.id}`),
@@ -326,20 +328,33 @@ export default function MatrixEvaluation({
                             <Info className="h-3.5 w-3.5" strokeWidth={2.5} />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedComment(isCommentOpen ? null : criterion.id)
+                          }
+                          className={`transition-colors ${
+                            comment
+                              ? 'text-blue-400 hover:text-blue-300'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                          title={`Comment for ${criterion.label}`}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                    <div className="mt-2">
-                      <label className="mb-0.5 block text-[10px] font-medium text-tusas-muted">
-                        Comment
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={`Comment for ${criterion.label}...`}
-                        value={comment}
-                        onChange={(e) => onCommentChange(criterion.id, e.target.value)}
-                        className="w-full rounded-lg border border-tusas-border bg-tusas-bg px-3 py-1.5 text-xs text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue"
-                      />
-                    </div>
+                    {isCommentOpen && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          placeholder={`Comment for ${criterion.label}...`}
+                          value={comment}
+                          onChange={(e) => onCommentChange(criterion.id, e.target.value)}
+                          className="w-full rounded-lg border border-tusas-border bg-tusas-bg px-3 py-1.5 text-xs text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue"
+                        />
+                      </div>
+                    )}
                   </td>
                   {phases.map((phase) => {
                     const cellKey = `${criterion.id}__${phase.id}`;
