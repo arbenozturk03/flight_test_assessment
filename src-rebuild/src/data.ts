@@ -1,4 +1,4 @@
-import type { QualitativeCriterion, Evaluation } from './types';
+import type { QualitativeCriterion, Evaluation, TestPointData } from './types';
 import { SKIP_VALUE } from './types';
 
 /** FTE (Flight Test Engineer) list – alphabetical, Emre Can Kaya first in dropdown */
@@ -259,6 +259,7 @@ const PUSH_OVER_CRITERIA: QualitativeCriterion[] = [
 
 const DYNAMIC_CRITERIA_MAP: Record<string, QualitativeCriterion[]> = {
   'Bank Angle Capture and Hold':    BACH_CT_CRITERIA,
+  'Pitch Angle Capture and Hold':   BACH_CT_CRITERIA,
   'Coordinated Turn':               BACH_CT_CRITERIA,
   'Pitch and Roll Tracking':        TRACKING_CRITERIA,
   'Pitch Tracking':                 TRACKING_CRITERIA,
@@ -270,6 +271,43 @@ const DYNAMIC_CRITERIA_MAP: Record<string, QualitativeCriterion[]> = {
   'Claw Mode Transition':           GEAR_CLAW_CRITERIA,
   '1-G Stabilized Push Over':       PUSH_OVER_CRITERIA,
 };
+
+/** Maneuvers that use the matrix evaluation (handling rows × phase columns) */
+export const MATRIX_MANEUVERS = new Set([
+  'Bank Angle Capture and Hold',
+  'Pitch Angle Capture and Hold',
+  'Pitch Tracking',
+  'Pitch and Roll Tracking',
+]);
+
+export function isMatrixManeuver(name: string | null | undefined): boolean {
+  return name != null && MATRIX_MANEUVERS.has(name);
+}
+
+export type HandlingEvalMode = 'sequential' | 'matrix';
+
+/**
+ * Matrix TP: sequential = compact list; matrix = grid.
+ * Migrates deprecated `matrixEvalPresentation` (`direct` → matrix, `flowchart` → sequential).
+ */
+export function getHandlingEvalMode(
+  tp: Pick<TestPointData, 'handlingEvalMode' | 'matrixEvalPresentation'> | undefined | null,
+): HandlingEvalMode {
+  const m = tp?.handlingEvalMode;
+  if (m === 'matrix' || m === 'sequential') return m;
+  const leg = tp?.matrixEvalPresentation;
+  if (leg === 'flowchart') return 'sequential';
+  if (leg === 'direct') return 'matrix';
+  return 'sequential';
+}
+
+/** True when this TP uses the phase × handling matrix (matrix maneuver + mode matrix). */
+export function isMatrixGridPresentation(
+  maneuverName: string | null | undefined,
+  mode: HandlingEvalMode,
+): boolean {
+  return isMatrixManeuver(maneuverName) && mode === 'matrix';
+}
 
 const DEFAULT_DYNAMIC_CRITERIA: QualitativeCriterion[] = [
   { id: 'initiation', label: 'Initiation', options: RATING_1_5, pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' } },
@@ -283,6 +321,20 @@ export function getManeuverCriteria(maneuverName: string | null): QualitativeCri
   return DYNAMIC_CRITERIA_MAP[maneuverName] ?? DEFAULT_DYNAMIC_CRITERIA;
 }
 
+/** Matrix evaluation separator */
+export const MATRIX_SEP = '__';
+
+/** Handling criteria row order for the evaluation matrix (matches UI + classic handling: trim → stick forces → control harmony …) */
+export const MATRIX_HANDLING_ORDER: string[] = [
+  'trim',
+  'stickForces',
+  'controlHarmony',
+  'predictability',
+  'characteristic',
+  'pilotCompensation',
+  'workload',
+];
+
 /** Convert a numeric rating to its descriptive PDF text with the numeric value, e.g. "Harmonious (5)" */
 export function resolvePdfLabel(criterion: QualitativeCriterion, value: string | number | null): string {
   if (value == null) return 'N/A';
@@ -292,8 +344,6 @@ export function resolvePdfLabel(criterion: QualitativeCriterion, value: string |
   return label ? `${label} (${str})` : str;
 }
 
-// Helper functions
-
 export function createDefaultEvaluation(): Evaluation {
   return {
     pio: null,
@@ -302,39 +352,86 @@ export function createDefaultEvaluation(): Evaluation {
   } as Evaluation;
 }
 
-export function isEvaluationComplete(ev: Evaluation, maneuverName?: string | null): boolean {
+export function isEvaluationComplete(
+  ev: Evaluation,
+  maneuverName?: string | null,
+  handlingMode?: HandlingEvalMode | null,
+): boolean {
   if (ev.pio == null || ev.chr == null) return false;
-  for (const c of HANDLING_CRITERIA) {
-    if (ev[c.id as keyof Evaluation] == null) return false;
-  }
-  for (const c of getManeuverCriteria(maneuverName ?? null)) {
-    if (ev[c.id] == null) return false;
+  const mn = maneuverName ?? null;
+
+  if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
+    const phases = getManeuverCriteria(mn);
+    for (const h of HANDLING_CRITERIA) {
+      for (const p of phases) {
+        if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null) return false;
+      }
+    }
+  } else {
+    for (const c of HANDLING_CRITERIA) {
+      if (ev[c.id as keyof Evaluation] == null) return false;
+    }
+    for (const c of getManeuverCriteria(mn)) {
+      if (ev[c.id] == null) return false;
+    }
   }
   return true;
 }
 
-export function getMissingFieldLabels(ev: Evaluation, maneuverName?: string | null): string[] {
+export function getMissingFieldLabels(
+  ev: Evaluation,
+  maneuverName?: string | null,
+  handlingMode?: HandlingEvalMode | null,
+): string[] {
   const missing: string[] = [];
   if (ev.pio == null) missing.push('PIO');
   if (ev.chr == null) missing.push('CHR');
-  HANDLING_CRITERIA.forEach((c) => {
-    if (ev[c.id as keyof Evaluation] == null) missing.push(c.label);
-  });
-  getManeuverCriteria(maneuverName ?? null).forEach((c) => {
-    if (ev[c.id] == null) missing.push(c.label);
-  });
+  const mn = maneuverName ?? null;
+
+  if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
+    const phases = getManeuverCriteria(mn);
+    for (const h of HANDLING_CRITERIA) {
+      for (const p of phases) {
+        if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null)
+          missing.push(`${h.label} × ${p.label}`);
+      }
+    }
+  } else {
+    HANDLING_CRITERIA.forEach((c) => {
+      if (ev[c.id as keyof Evaluation] == null) missing.push(c.label);
+    });
+    getManeuverCriteria(mn).forEach((c) => {
+      if (ev[c.id] == null) missing.push(c.label);
+    });
+  }
   return missing;
 }
 
-export function getMissingFieldIds(ev: Evaluation, maneuverName?: string | null): string[] {
+export function getMissingFieldIds(
+  ev: Evaluation,
+  maneuverName?: string | null,
+  handlingMode?: HandlingEvalMode | null,
+): string[] {
   const missing: string[] = [];
   if (ev.pio == null) missing.push('pio');
   if (ev.chr == null) missing.push('chr');
-  HANDLING_CRITERIA.forEach((c) => {
-    if (ev[c.id as keyof Evaluation] == null) missing.push(c.id);
-  });
-  getManeuverCriteria(maneuverName ?? null).forEach((c) => {
-    if (ev[c.id] == null) missing.push(c.id);
-  });
+  const mn = maneuverName ?? null;
+
+  if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
+    const phases = getManeuverCriteria(mn);
+    for (const h of HANDLING_CRITERIA) {
+      for (const p of phases) {
+        const key = `${h.id}${MATRIX_SEP}${p.id}`;
+        if (ev[key] == null) missing.push(key);
+      }
+    }
+  } else {
+    HANDLING_CRITERIA.forEach((c) => {
+      if (ev[c.id as keyof Evaluation] == null) missing.push(c.id);
+    });
+    getManeuverCriteria(mn).forEach((c) => {
+      if (ev[c.id] == null) missing.push(c.id);
+    });
+  }
   return missing;
 }

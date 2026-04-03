@@ -259,7 +259,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
   comment: string;
   onCommentChange: (t: string) => void;
 }) {
-  const [inputMode, setInputMode] = useState<InputMode>('flowchart');
+  const [inputMode, setInputMode] = useState<InputMode>('direct');
   const [nodeId, setNodeId] = useState(mode === 'pio' ? PIO_ROOT : CHR_ROOT);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbStep[]>([]);
   const [animKey, setAnimKey] = useState(0);
@@ -536,7 +536,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
 
   return (
     <div className={`space-y-4 ${hasError ? 'rounded-xl border-2 border-red-600 bg-red-500/10 p-4' : ''}`}>
-      {/* Header: title + badge + Flowchart/Direct toggle */}
+      {/* Header: title + badge; left = compact Direct, right = detailed Flowchart */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <h4 className="text-sm font-bold text-tusas-text">{title}</h4>
@@ -549,21 +549,8 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
         <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
           <button
             type="button"
-            onClick={() => setInputMode('flowchart')}
-            title="Decision Tree"
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-              inputMode === 'flowchart'
-                ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                : 'text-tusas-muted hover:text-tusas-text'
-            }`}
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Flowchart</span>
-          </button>
-          <button
-            type="button"
             onClick={() => setInputMode('direct')}
-            title="Direct Number Input"
+            title="Direct — compact numeric scale"
             className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
               inputMode === 'direct'
                 ? 'bg-tusas-surface text-tusas-text shadow-sm'
@@ -572,6 +559,19 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
           >
             <Hash className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Direct</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode('flowchart')}
+            title="Flowchart — step-by-step decision tree"
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+              inputMode === 'flowchart'
+                ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                : 'text-tusas-muted hover:text-tusas-text'
+            }`}
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Flowchart</span>
           </button>
         </div>
       </div>

@@ -48,6 +48,13 @@ export interface TestPointData {
   cancelled: boolean;
   comments: Record<string, string>;
   generalComment: string;
+  /**
+   * Matrix-capable maneuvers: `sequential` = trim → dynamics → handling (compact);
+   * `matrix` = full phase × criteria grid.
+   */
+  handlingEvalMode?: 'sequential' | 'matrix';
+  /** @deprecated Use `handlingEvalMode`. `direct` was matrix, `flowchart` was sequential. */
+  matrixEvalPresentation?: 'direct' | 'flowchart';
 }
 
 export type Evaluations = Record<number, TestPointData>;

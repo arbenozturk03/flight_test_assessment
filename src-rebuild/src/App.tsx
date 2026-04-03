@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RotateCcw, XCircle } from 'lucide-react';
 import type { Evaluations, TestPointData } from './types';
-import { createDefaultEvaluation, isEvaluationComplete } from './data';
+import { createDefaultEvaluation, getHandlingEvalMode, isEvaluationComplete } from './data';
 import { exportToPdf } from './exportPdf';
 import TusasLogo from './components/TusasLogo';
 import ManeuverSetup from './components/ManeuverSetup';
@@ -74,7 +74,13 @@ export default function App() {
     if (data.cancelled) {
       setCancelled((prev) => (prev.includes(tp) ? prev : [...prev, tp]));
       setCompleted((prev) => prev.filter((x) => x !== tp));
-    } else if (isEvaluationComplete(data.evaluation || createDefaultEvaluation(), data.maneuver)) {
+    } else if (
+      isEvaluationComplete(
+        data.evaluation || createDefaultEvaluation(),
+        data.maneuver,
+        getHandlingEvalMode(data),
+      )
+    ) {
       setCompleted((prev) => (prev.includes(tp) ? prev : [...prev, tp]));
       setCancelled((prev) => prev.filter((x) => x !== tp));
     }
@@ -131,7 +137,7 @@ export default function App() {
     >
       {/* Header */}
       <header
-        className="shrink-0 min-w-0 border-b border-tusas-border px-4 py-3"
+        className="relative z-50 shrink-0 min-w-0 border-b border-tusas-border bg-[#0a0a0a] px-4 py-3"
         style={{ backgroundColor: '#0a0a0a' }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">

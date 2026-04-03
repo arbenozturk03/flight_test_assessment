@@ -1,5 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { Check, ChevronDown, ChevronUp, CircleX, ClipboardList, Copy, Download, Pencil, RefreshCw } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CircleX,
+  ClipboardList,
+  Copy,
+  Download,
+  Hash,
+  LayoutGrid,
+  Pencil,
+  RefreshCw,
+} from 'lucide-react';
 import type { Evaluation, Evaluations, TestPointData } from '../types';
 import {
   HANDLING_CRITERIA,
@@ -9,8 +21,77 @@ import {
   isEvaluationComplete,
   getMissingFieldLabels,
   getMissingFieldIds,
+  MATRIX_HANDLING_ORDER,
+  MATRIX_SEP,
+  getHandlingEvalMode,
+  isMatrixManeuver,
 } from '../data';
 import OptionSelector from './OptionSelector';
+
+/** Trim → maneuver dynamics → handling (non-trim), same order as non-matrix TPs. */
+function ClassicHandlingEvaluators({
+  currentManeuver,
+  currentEval,
+  errorFieldIds,
+  updateField,
+  updateComment,
+  comments,
+}: {
+  currentManeuver: string;
+  currentEval: Evaluation;
+  errorFieldIds: string[];
+  updateField: (field: string, value: string | number | null) => void;
+  updateComment: (fieldId: string, text: string) => void;
+  comments: Record<string, string>;
+}) {
+  return (
+    <>
+      {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => (
+        <OptionSelector
+          key={c.id}
+          label={c.label}
+          value={currentEval[c.id as keyof Evaluation] as string | null}
+          options={c.options}
+          onChange={(v) => updateField(c.id, v)}
+          hasError={errorFieldIds.includes(c.id)}
+          comment={comments[c.id] ?? ''}
+          onCommentChange={(t) => updateComment(c.id, t)}
+          pdfLabels={c.pdfLabels}
+          longDescriptions={c.longDescriptions}
+        />
+      ))}
+      {getManeuverCriteria(currentManeuver).map((c) => (
+        <OptionSelector
+          key={c.id}
+          label={c.label}
+          value={(currentEval[c.id] ?? null) as string | null}
+          options={c.options}
+          onChange={(v) => updateField(c.id, v)}
+          hasError={errorFieldIds.includes(c.id)}
+          comment={comments[c.id] ?? ''}
+          onCommentChange={(t) => updateComment(c.id, t)}
+          pdfLabels={c.pdfLabels}
+          longDescriptions={c.longDescriptions}
+        />
+      ))}
+      {HANDLING_CRITERIA.filter((c) => c.id !== 'trim').map((c) => (
+        <OptionSelector
+          key={c.id}
+          label={c.label}
+          value={currentEval[c.id as keyof Evaluation] as string | null}
+          options={c.options}
+          onChange={(v) => updateField(c.id, v)}
+          hasError={errorFieldIds.includes(c.id)}
+          comment={comments[c.id] ?? ''}
+          onCommentChange={(t) => updateComment(c.id, t)}
+          pdfLabels={c.pdfLabels}
+          longDescriptions={c.longDescriptions}
+        />
+      ))}
+    </>
+  );
+}
+import MatrixEvaluation from './MatrixEvaluation';
 import DecisionTreeRating from './DecisionTreeRating';
 import GeneralEvaluationSummary from './GeneralEvaluationSummary';
 import TusasLogo from './TusasLogo';
@@ -60,12 +141,15 @@ export default function TestEvaluation({
   const currentGeneralComment = currentData?.generalComment ?? '';
   const isCancelled =
     currentTestPoint != null ? cancelled.includes(currentTestPoint) : false;
+  const handlingEvalMode = getHandlingEvalMode(currentData);
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [maneuverGridOpen, setManeuverGridOpen] = useState(!currentManeuver);
   const [appliedFromTp, setAppliedFromTp] = useState<number | null>(null);
-  const errorFieldIds = validationError ? getMissingFieldIds(currentEval, currentManeuver) : [];
+  const errorFieldIds = validationError
+    ? getMissingFieldIds(currentEval, currentManeuver, handlingEvalMode)
+    : [];
   const mainContentRef = useRef<HTMLElement>(null);
 
   const scrollToTop = () => {
@@ -107,7 +191,8 @@ export default function TestEvaluation({
 
   const updateField = (field: string, value: string | number | null) => {
     const updated: Evaluation = { ...currentEval, [field]: value };
-    if (isEvaluationComplete(updated, currentManeuver)) setValidationError(null);
+    if (isEvaluationComplete(updated, currentManeuver, handlingEvalMode))
+      setValidationError(null);
     emitUpdate({ evaluation: updated, cancelled: false });
   };
 
@@ -131,6 +216,8 @@ export default function TestEvaluation({
       evaluation: { ...source.evaluation },
       comments: { ...source.comments },
       generalComment: source.generalComment,
+      handlingEvalMode: source.handlingEvalMode,
+      matrixEvalPresentation: source.matrixEvalPresentation,
       cancelled: false,
     });
     setAppliedFromTp(sourceTp);
@@ -142,6 +229,8 @@ export default function TestEvaluation({
       comments: {},
       generalComment: '',
       cancelled: false,
+      handlingEvalMode: 'sequential',
+      matrixEvalPresentation: undefined,
     });
     setAppliedFromTp(null);
   };
@@ -158,8 +247,8 @@ export default function TestEvaluation({
   };
 
   const completeAndNext = () => {
-    if (!isEvaluationComplete(currentEval, currentManeuver)) {
-      const missing = getMissingFieldLabels(currentEval, currentManeuver);
+    if (!isEvaluationComplete(currentEval, currentManeuver, handlingEvalMode)) {
+      const missing = getMissingFieldLabels(currentEval, currentManeuver, handlingEvalMode);
       setValidationError(
         `You left the following field(s) blank:\n\n${missing.join('\n')}\n\nPlease provide a rating or select "N/A" to skip.`,
       );
@@ -394,51 +483,97 @@ export default function TestEvaluation({
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
               <>
-                {/* 1. Trim + Maneuver-Specific + General Handling Criteria */}
-                <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                  {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => (
-                    <OptionSelector
-                      key={c.id}
-                      label={c.label}
-                      value={currentEval[c.id as keyof Evaluation] as string | null}
-                      options={c.options}
-                      onChange={(v) => updateField(c.id, v)}
-                      hasError={errorFieldIds.includes(c.id)}
-                      comment={currentData?.comments?.[c.id] ?? ''}
-                      onCommentChange={(t) => updateComment(c.id, t)}
-                      pdfLabels={c.pdfLabels}
-                      longDescriptions={c.longDescriptions}
+                {/* 1. Evaluation section: Matrix or Classic depending on maneuver */}
+                {isMatrixManeuver(currentManeuver) ? (
+                  <section className="min-w-0 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-base font-bold text-tusas-text">
+                        Handling evaluation
+                      </h3>
+                      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
+                        <button
+                          type="button"
+                          title="Direct — sequential list (trim, maneuver phases, handling)"
+                          onClick={() =>
+                            emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
+                          }
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                            handlingEvalMode === 'sequential'
+                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                        >
+                          <Hash className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Direct</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Matrix — full grid (phases × criteria)"
+                          onClick={() =>
+                            emitUpdate({ handlingEvalMode: 'matrix', matrixEvalPresentation: undefined })
+                          }
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                            handlingEvalMode === 'matrix'
+                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                        >
+                          <LayoutGrid className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Matrix</span>
+                        </button>
+                      </div>
+                    </div>
+                    {handlingEvalMode === 'sequential' ? (
+                      <div className="space-y-6">
+                        <ClassicHandlingEvaluators
+                          currentManeuver={currentManeuver}
+                          currentEval={currentEval}
+                          errorFieldIds={errorFieldIds}
+                          updateField={updateField}
+                          updateComment={updateComment}
+                          comments={currentData?.comments ?? {}}
+                        />
+                      </div>
+                    ) : (
+                      (() => {
+                        const phases = getManeuverCriteria(currentManeuver);
+                        const orderedHandling = MATRIX_HANDLING_ORDER.map(
+                          (id) => HANDLING_CRITERIA.find((c) => c.id === id)!,
+                        ).filter(Boolean);
+                        const errorKeys = new Set(errorFieldIds);
+                        return (
+                          <MatrixEvaluation
+                            key={`${currentManeuver}-matrix`}
+                            handlingCriteria={orderedHandling}
+                            phases={phases}
+                            getValue={(hId, pId) => {
+                              const v = currentEval[`${hId}${MATRIX_SEP}${pId}`];
+                              return v != null ? String(v) : null;
+                            }}
+                            onValueChange={(hId, pId, v) =>
+                              updateField(`${hId}${MATRIX_SEP}${pId}`, v)
+                            }
+                            getComment={(hId) => currentData?.comments?.[hId] ?? ''}
+                            onCommentChange={(hId, text) => updateComment(hId, text)}
+                            errorCellKeys={errorKeys}
+                            scrollContainerRef={mainContentRef}
+                          />
+                        );
+                      })()
+                    )}
+                  </section>
+                ) : (
+                  <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                    <ClassicHandlingEvaluators
+                      currentManeuver={currentManeuver}
+                      currentEval={currentEval}
+                      errorFieldIds={errorFieldIds}
+                      updateField={updateField}
+                      updateComment={updateComment}
+                      comments={currentData?.comments ?? {}}
                     />
-                  ))}
-                  {getManeuverCriteria(currentManeuver).map((c) => (
-                    <OptionSelector
-                      key={c.id}
-                      label={c.label}
-                      value={(currentEval[c.id] ?? null) as string | null}
-                      options={c.options}
-                      onChange={(v) => updateField(c.id, v)}
-                      hasError={errorFieldIds.includes(c.id)}
-                      comment={currentData?.comments?.[c.id] ?? ''}
-                      onCommentChange={(t) => updateComment(c.id, t)}
-                      pdfLabels={c.pdfLabels}
-                      longDescriptions={c.longDescriptions}
-                    />
-                  ))}
-                  {HANDLING_CRITERIA.filter((c) => c.id !== 'trim').map((c) => (
-                    <OptionSelector
-                      key={c.id}
-                      label={c.label}
-                      value={currentEval[c.id as keyof Evaluation] as string | null}
-                      options={c.options}
-                      onChange={(v) => updateField(c.id, v)}
-                      hasError={errorFieldIds.includes(c.id)}
-                      comment={currentData?.comments?.[c.id] ?? ''}
-                      onCommentChange={(t) => updateComment(c.id, t)}
-                      pdfLabels={c.pdfLabels}
-                      longDescriptions={c.longDescriptions}
-                    />
-                  ))}
-                </section>
+                  </section>
+                )}
 
                 {/* 3. PIO & CHR Decision Tree Ratings */}
                 <section className="rounded-lg border border-tusas-border bg-tusas-surface p-6">

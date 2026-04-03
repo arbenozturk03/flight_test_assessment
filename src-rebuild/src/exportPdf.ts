@@ -1,7 +1,17 @@
 /** PDF generated offline (jsPDF local, no CDN). doc.save() triggers download to device Downloads/Files. */
 import jsPDF from 'jspdf';
 import type { Evaluation, Evaluations } from './types';
-import { HANDLING_CRITERIA, getManeuverCriteria, createDefaultEvaluation, resolvePdfLabel } from './data';
+import {
+  HANDLING_CRITERIA,
+  getManeuverCriteria,
+  createDefaultEvaluation,
+  resolvePdfLabel,
+  MATRIX_HANDLING_ORDER,
+  MATRIX_SEP,
+  isMatrixManeuver,
+  isMatrixGridPresentation,
+  getHandlingEvalMode,
+} from './data';
 import { buildNarrative, qualitySentiment } from './utils/narrativeBuilder';
 import type { NarrativeItem } from './utils/narrativeBuilder';
 
@@ -72,160 +82,9 @@ export function exportToPdf({
   const lineH = 5;
   const fontSize = 6;
 
-  const dynHeaderOrder: { id: string; label: string }[] = [];
-  const seen = new Set<string>();
-  allTps.forEach((tp) => {
-    const maneuver = evaluations[tp]?.maneuver ?? null;
-    getManeuverCriteria(maneuver).forEach((c) => {
-      if (!seen.has(c.id)) {
-        seen.add(c.id);
-        dynHeaderOrder.push({ id: c.id, label: c.label });
-      }
-    });
-  });
-  const maxDynCols = dynHeaderOrder.length;
-  const dynHeaders = dynHeaderOrder.map((c) => c.label);
-
-  const trimCriterion = HANDLING_CRITERIA.find((c) => c.id === 'trim')!;
-  const handlingWithoutTrim = HANDLING_CRITERIA.filter((c) => c.id !== 'trim');
-
-  const headers = [
-    'Test Point',
-    'Maneuver',
-    trimCriterion.label,
-    ...dynHeaders,
-    ...handlingWithoutTrim.map((c) => c.label),
-    'CHR',
-    'PIO',
-  ];
-  const colCount = headers.length;
-  const colW = (pageW - 2 * margin) / colCount;
-
-  const trimIdx = 2;
-  const dynStartIdx = 3;
-  const dynEndIdx = 3 + maxDynCols - 1;
-  const handlingStartIdx = dynEndIdx + 1;
-  const handlingEndIdx = handlingStartIdx + handlingWithoutTrim.length - 1;
-  const chrIdx = handlingEndIdx + 1;
-  const pioIdx = chrIdx + 1;
-
-  const wrapText = (text: string, width: number): string[] =>
-    doc.splitTextToSize(String(text ?? 'N/A'), width - 2);
-
-  const maxRowHeight = (cells: string[]): number => {
-    let maxLines = 1;
-    cells.forEach((cell) => {
-      const lines = wrapText(cell, colW);
-      if (lines.length > maxLines) maxLines = lines.length;
-    });
-    return Math.max(7, maxLines * lineH + 2);
-  };
-
-  const drawCell = (
-    text: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    bold = false,
-    textRGB?: [number, number, number],
-  ) => {
-    doc.setFontSize(fontSize);
-    const parts = text.split('\n');
-    const maxLines = Math.floor(h / lineH);
-    let lineIdx = 0;
-    parts.forEach((part, i) => {
-      const isSubHeader = parts.length > 1 && i === 0;
-      doc.setFont('helvetica', bold || isSubHeader ? 'bold' : 'normal');
-      if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
-      const wrapped = doc.splitTextToSize(part, w - 2);
-      wrapped.slice(0, maxLines - lineIdx).forEach((line: string) => {
-        if (lineIdx >= maxLines) return;
-        if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
-        doc.text(line, x + 1, y + 4 + lineIdx * lineH);
-        lineIdx++;
-      });
-    });
-  };
-
-  const drawRow = (cells: string[], y: number, h: number, bold = false, boldFirstCol = false) => {
-    let x = margin;
-    cells.forEach((cell, idx) => {
-      const isTestPointOrManeuver = idx === 0 || idx === 1;
-      const isTrim = idx === trimIdx;
-      const isDynamic = idx >= dynStartIdx && idx <= dynEndIdx;
-      const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
-      const isPioChr = idx === pioIdx || idx === chrIdx;
-
-      const isActionPhase = isTrim || isDynamic;
-
-      if (isTestPointOrManeuver) {
-        doc.setFillColor(248, 249, 250);
-      } else if (isActionPhase) {
-        doc.setFillColor(210, 215, 220);
-      } else if (isHandling) {
-        doc.setFillColor(173, 181, 189);
-      } else if (isPioChr) {
-        doc.setFillColor(95, 103, 112);
-      } else {
-        doc.setFillColor(255, 255, 255);
-      }
-      doc.rect(x, y, colW, h, 'F');
-
-      doc.setDrawColor(isPioChr ? 50 : 90);
-      doc.setLineWidth(0.3);
-      doc.rect(x, y, colW, h);
-
-      const textRGB: [number, number, number] = isPioChr ? [255, 255, 255] : [30, 30, 30];
-      doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
-      const isBold = bold || (boldFirstCol && idx === 0) || isPioChr;
-      drawCell(cell, x, y, colW, h, isBold, textRGB);
-      x += colW;
-    });
-    doc.setTextColor(0, 0, 0);
-  };
-
-  const drawVerticalHeaderRow = (cells: string[], y: number, h: number) => {
-    let x = margin;
-    doc.setFontSize(fontSize);
-    doc.setFont('helvetica', 'bold');
-    cells.forEach((cell, idx) => {
-      const isTestPointOrManeuver = idx === 0 || idx === 1;
-      const isTrim = idx === trimIdx;
-      const isDynamic = idx >= dynStartIdx && idx <= dynEndIdx;
-      const isHandling = idx >= handlingStartIdx && idx <= handlingEndIdx;
-      const isPioChr = idx === pioIdx || idx === chrIdx;
-
-      const isActionPhase = isTrim || isDynamic;
-
-      if (isTestPointOrManeuver) {
-        doc.setFillColor(233, 236, 239);
-      } else if (isActionPhase) {
-        doc.setFillColor(178, 186, 194);
-      } else if (isHandling) {
-        doc.setFillColor(134, 142, 150);
-      } else if (isPioChr) {
-        doc.setFillColor(75, 83, 92);
-      } else {
-        doc.setFillColor(240, 240, 240);
-      }
-      doc.rect(x, y, colW, h, 'F');
-
-      doc.setDrawColor(isPioChr ? 40 : 90);
-      doc.setLineWidth(0.3);
-      doc.rect(x, y, colW, h);
-
-      const hdrTextRGB: [number, number, number] = (isPioChr || isHandling) ? [255, 255, 255] : [20, 20, 20];
-      doc.setTextColor(hdrTextRGB[0], hdrTextRGB[1], hdrTextRGB[2]);
-      doc.saveGraphicsState();
-      doc.setTextColor(hdrTextRGB[0], hdrTextRGB[1], hdrTextRGB[2]);
-      const textX = x + colW / 2 + 1.5;
-      const textY = y + h - 2;
-      doc.text(cell, textX, textY, { angle: 90, maxWidth: h - 4 });
-      doc.restoreGraphicsState();
-      x += colW;
-    });
-  };
+  const orderedHandling = MATRIX_HANDLING_ORDER
+    .map((id) => HANDLING_CRITERIA.find((c) => c.id === id)!)
+    .filter(Boolean);
 
   // Title
   doc.setFontSize(14);
@@ -260,122 +119,319 @@ export function exportToPdf({
 
   let curY = 24 + maneuverText.length * 6 + 2;
 
-  // Header row with vertical text
-  const headerH = 25;
-  drawVerticalHeaderRow(headers, curY, headerH);
-  curY += headerH;
+  const tableW = pageW - 2 * margin;
+  const rowH = 7;
+  const headerH = 8;
 
-  // Data rows
+  // ── Build classic (non-matrix) column headers for TPs that use old format ──
+  const dynHeaderOrder: { id: string; label: string }[] = [];
+  const seenDyn = new Set<string>();
   allTps.forEach((tp) => {
+    const mn = evaluations[tp]?.maneuver ?? null;
+    const td = evaluations[tp];
+    if (isMatrixGridPresentation(mn, getHandlingEvalMode(td))) return;
+    getManeuverCriteria(mn).forEach((c) => {
+      if (!seenDyn.has(c.id)) { seenDyn.add(c.id); dynHeaderOrder.push({ id: c.id, label: c.label }); }
+    });
+  });
+  const maxDynCols = dynHeaderOrder.length;
+  const trimCriterion = HANDLING_CRITERIA.find((c) => c.id === 'trim')!;
+  const handlingWithoutTrim = HANDLING_CRITERIA.filter((c) => c.id !== 'trim');
+
+  const classicHeaders = [
+    'Test Point', 'Maneuver', trimCriterion.label,
+    ...dynHeaderOrder.map((c) => c.label),
+    ...handlingWithoutTrim.map((c) => c.label),
+    'CHR', 'PIO',
+  ];
+  const classicColCount = classicHeaders.length;
+  const classicColW = (pageW - 2 * margin) / classicColCount;
+
+  const cTrimIdx = 2;
+  const cDynStart = 3;
+  const cDynEnd = 3 + maxDynCols - 1;
+  const cHandStart = cDynEnd + 1;
+  const cHandEnd = cHandStart + handlingWithoutTrim.length - 1;
+  const cChrIdx = cHandEnd + 1;
+  const cPioIdx = cChrIdx + 1;
+
+  const wrapText = (text: string, width: number): string[] =>
+    doc.splitTextToSize(String(text ?? 'N/A'), width - 2);
+
+  const maxRowHeightClassic = (cells: string[]): number => {
+    let maxLines = 1;
+    cells.forEach((cell) => { const l = wrapText(cell, classicColW); if (l.length > maxLines) maxLines = l.length; });
+    return Math.max(7, maxLines * lineH + 2);
+  };
+
+  const drawClassicCell = (text: string, x: number, y: number, w: number, h: number, bold = false, textRGB?: [number, number, number]) => {
+    doc.setFontSize(fontSize);
+    const parts = text.split('\n');
+    const maxLines = Math.floor(h / lineH);
+    let lineIdx = 0;
+    parts.forEach((part, i) => {
+      const isSubHeader = parts.length > 1 && i === 0;
+      doc.setFont('helvetica', bold || isSubHeader ? 'bold' : 'normal');
+      if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+      const wrapped = doc.splitTextToSize(part, w - 2);
+      wrapped.slice(0, maxLines - lineIdx).forEach((line: string) => {
+        if (lineIdx >= maxLines) return;
+        if (textRGB) doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+        doc.text(line, x + 1, y + 4 + lineIdx * lineH);
+        lineIdx++;
+      });
+    });
+  };
+
+  const drawClassicRow = (cells: string[], y: number, h: number, bold = false, boldFirstCol = false) => {
+    let x = margin;
+    cells.forEach((cell, idx) => {
+      const isIdent = idx === 0 || idx === 1;
+      const isTrim = idx === cTrimIdx;
+      const isDyn = idx >= cDynStart && idx <= cDynEnd;
+      const isHand = idx >= cHandStart && idx <= cHandEnd;
+      const isPioChr = idx === cPioIdx || idx === cChrIdx;
+      const isAction = isTrim || isDyn;
+
+      if (isIdent) doc.setFillColor(248, 249, 250);
+      else if (isAction) doc.setFillColor(210, 215, 220);
+      else if (isHand) doc.setFillColor(173, 181, 189);
+      else if (isPioChr) doc.setFillColor(95, 103, 112);
+      else doc.setFillColor(255, 255, 255);
+      doc.rect(x, y, classicColW, h, 'F');
+      doc.setDrawColor(isPioChr ? 50 : 90);
+      doc.setLineWidth(0.3);
+      doc.rect(x, y, classicColW, h);
+      const textRGB: [number, number, number] = isPioChr ? [255, 255, 255] : [30, 30, 30];
+      const isBold = bold || (boldFirstCol && idx === 0) || isPioChr;
+      drawClassicCell(cell, x, y, classicColW, h, isBold, textRGB);
+      x += classicColW;
+    });
+    doc.setTextColor(0, 0, 0);
+  };
+
+  const drawClassicVerticalHeader = (cells: string[], y: number, h: number) => {
+    let x = margin;
+    doc.setFontSize(fontSize);
+    doc.setFont('helvetica', 'bold');
+    cells.forEach((cell, idx) => {
+      const isIdent = idx === 0 || idx === 1;
+      const isTrim = idx === cTrimIdx;
+      const isDyn = idx >= cDynStart && idx <= cDynEnd;
+      const isHand = idx >= cHandStart && idx <= cHandEnd;
+      const isPioChr = idx === cPioIdx || idx === cChrIdx;
+      const isAction = isTrim || isDyn;
+
+      if (isIdent) doc.setFillColor(233, 236, 239);
+      else if (isAction) doc.setFillColor(178, 186, 194);
+      else if (isHand) doc.setFillColor(134, 142, 150);
+      else if (isPioChr) doc.setFillColor(75, 83, 92);
+      else doc.setFillColor(240, 240, 240);
+      doc.rect(x, y, classicColW, h, 'F');
+      doc.setDrawColor(isPioChr ? 40 : 90);
+      doc.setLineWidth(0.3);
+      doc.rect(x, y, classicColW, h);
+      const hdrRGB: [number, number, number] = (isPioChr || isHand) ? [255, 255, 255] : [20, 20, 20];
+      doc.setTextColor(hdrRGB[0], hdrRGB[1], hdrRGB[2]);
+      doc.saveGraphicsState();
+      doc.setTextColor(hdrRGB[0], hdrRGB[1], hdrRGB[2]);
+      doc.text(cell, x + classicColW / 2 + 1.5, y + h - 2, { angle: 90, maxWidth: h - 4 });
+      doc.restoreGraphicsState();
+      x += classicColW;
+    });
+  };
+
+  // Separate TPs into classic wide table vs per-TP matrix grid
+  const classicTps = allTps.filter((tp) => {
+    const td = evaluations[tp];
+    const mn = td?.maneuver ?? null;
+    if (!isMatrixManeuver(mn)) return true;
+    return getHandlingEvalMode(td) === 'sequential';
+  });
+  const matrixTps = allTps.filter((tp) => {
+    const td = evaluations[tp];
+    return isMatrixGridPresentation(td?.maneuver ?? null, getHandlingEvalMode(td));
+  });
+
+  // ── Classic table ──
+  if (classicTps.length > 0 && maxDynCols > 0) {
+    const classicHeaderH = 25;
+    drawClassicVerticalHeader(classicHeaders, curY, classicHeaderH);
+    curY += classicHeaderH;
+
+    classicTps.forEach((tp) => {
+      const tpData = evaluations[tp];
+      const isCancelled = cancelled.includes(tp);
+      const cancelledVal = 'C';
+      const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
+      const mn = tpData?.maneuver || null;
+      const dynCriteria = getManeuverCriteria(mn);
+      const comments = tpData?.comments ?? {};
+      const generalComment = tpData?.generalComment ?? '';
+
+      const dynValById = new Map<string, string>();
+      dynCriteria.forEach((c) => {
+        dynValById.set(c.id, isCancelled ? cancelledVal : resolvePdfLabel(c, ev[c.id]));
+      });
+      const dynCells: string[] = [];
+      for (let i = 0; i < maxDynCols; i++) {
+        const h = dynHeaderOrder[i];
+        if (h && dynValById.has(h.id)) dynCells.push(dynValById.get(h.id)!);
+        else dynCells.push(isCancelled ? cancelledVal : '—');
+      }
+
+      const cells = [
+        String(tp),
+        mn || 'N/A',
+        isCancelled ? cancelledVal : resolvePdfLabel(trimCriterion, ev[trimCriterion.id as keyof Evaluation]),
+        ...dynCells,
+        ...handlingWithoutTrim.map((c) => isCancelled ? cancelledVal : resolvePdfLabel(c, ev[c.id as keyof Evaluation])),
+        isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
+        isCancelled ? cancelledVal : String(ev.pio ?? 'N/A'),
+      ];
+
+      const rH = maxRowHeightClassic(cells);
+      if (curY + rH > pageH - margin) {
+        doc.addPage('l');
+        curY = margin;
+        drawClassicVerticalHeader(classicHeaders, curY, classicHeaderH);
+        curY += classicHeaderH;
+      }
+      drawClassicRow(cells, curY, rH, false, true);
+      curY += rH;
+
+      // Comments
+      if (!isCancelled) {
+        const commentW = pageW - 2 * margin;
+        const labelW = classicColW * 1.5;
+        const commentX = margin + labelW;
+        const cW = commentW - labelW;
+        const criterionLabelMap = new Map<string, string>([
+          ['chr', 'CHR'], ['pio', 'PIO'],
+          ...HANDLING_CRITERIA.map((c) => [c.id, c.label] as const),
+          ...dynHeaderOrder.map((c) => [c.id, c.label] as const),
+        ]);
+        const allCommentLines: string[] = [];
+        Object.entries(comments)
+          .filter(([, text]) => typeof text === 'string' && text.trim() !== '')
+          .forEach(([id, text]) => {
+            const lbl = criterionLabelMap.get(id) ?? id;
+            allCommentLines.push(...doc.splitTextToSize(`${lbl}: ${String(text).trim()}`, cW - 2));
+          });
+        if (generalComment?.trim()) allCommentLines.push(...doc.splitTextToSize(`General: ${generalComment.trim()}`, cW - 2));
+
+        if (allCommentLines.length > 0) {
+          const commentH = Math.max(6, allCommentLines.length * lineH + 2);
+          if (curY + commentH > pageH - margin) { doc.addPage('l'); curY = margin; }
+          doc.setFontSize(fontSize);
+          doc.setFont('helvetica', 'bold');
+          doc.setDrawColor(180);
+          doc.rect(margin, curY, labelW, commentH);
+          doc.text('All Comments:', margin + 1, curY + 4);
+          doc.setFont('helvetica', 'normal');
+          doc.rect(commentX, curY, cW, commentH);
+          allCommentLines.forEach((line: string, i: number) => { doc.text(line, commentX + 1, curY + 4 + i * lineH); });
+          curY += commentH;
+        }
+      }
+    });
+    curY += 4;
+  }
+
+  // ── Matrix tables ──
+  matrixTps.forEach((tp) => {
     const tpData = evaluations[tp];
     const isCancelled = cancelled.includes(tp);
-    const cancelledVal = 'C';
-
     const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
     const maneuverName = tpData?.maneuver || null;
-    const dynCriteria = getManeuverCriteria(maneuverName);
+    const phases = getManeuverCriteria(maneuverName);
     const comments = tpData?.comments ?? {};
     const generalComment = tpData?.generalComment ?? '';
 
-    const dynValById = new Map<string, string>();
-    dynCriteria.forEach((c) => {
-      const val = isCancelled ? cancelledVal : resolvePdfLabel(c, ev[c.id]);
-      dynValById.set(c.id, val);
+    const labelColW = tableW * 0.28;
+    const dataColW = (tableW - labelColW) / phases.length;
+
+    const matrixHeight = headerH + orderedHandling.length * rowH + rowH + 4;
+    if (curY + matrixHeight > pageH - margin) { doc.addPage('l'); curY = margin; }
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Test Point ${tp} — ${maneuverName || 'N/A'}${isCancelled ? ' (Cancelled)' : ''}`, margin, curY + 4);
+    curY += 7;
+
+    if (isCancelled) {
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 50, 50);
+      doc.text('This test point was cancelled.', margin, curY + 3);
+      doc.setTextColor(0, 0, 0); curY += 8; return;
+    }
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+    doc.text(`CHR: ${ev.chr ?? 'N/A'}   |   PIO: ${ev.pio ?? 'N/A'}`, margin, curY + 3);
+    doc.setTextColor(0, 0, 0); curY += 6;
+
+    let x = margin;
+    doc.setFillColor(55, 62, 68);
+    doc.rect(x, curY, labelColW, headerH, 'F');
+    doc.setDrawColor(90); doc.setLineWidth(0.2);
+    doc.rect(x, curY, labelColW, headerH);
+    x += labelColW;
+    phases.forEach((phase) => {
+      doc.setFillColor(55, 62, 68);
+      doc.rect(x, curY, dataColW, headerH, 'F');
+      doc.setDrawColor(90); doc.rect(x, curY, dataColW, headerH);
+      doc.setFontSize(fontSize); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+      const tw = doc.getTextWidth(phase.label);
+      doc.text(phase.label, x + dataColW / 2 - tw / 2, curY + 5.5);
+      x += dataColW;
     });
+    curY += headerH;
 
-    const dynCells: string[] = [];
-    for (let i = 0; i < maxDynCols; i++) {
-      const h = dynHeaderOrder[i];
-      if (h && dynValById.has(h.id)) {
-        dynCells.push(dynValById.get(h.id)!);
-      } else {
-        dynCells.push(isCancelled ? cancelledVal : '—');
-      }
-    }
-
-    const trimCell = isCancelled ? cancelledVal : resolvePdfLabel(trimCriterion, ev[trimCriterion.id as keyof Evaluation]);
-
-    const cells = [
-      String(tp),
-      maneuverName || 'N/A',
-      trimCell,
-      ...dynCells,
-      ...handlingWithoutTrim.map((c) => {
-        if (isCancelled) return cancelledVal;
-        return resolvePdfLabel(c, ev[c.id as keyof Evaluation]);
-      }),
-      isCancelled ? cancelledVal : String(ev.chr ?? 'N/A'),
-      isCancelled ? cancelledVal : String(ev.pio ?? 'N/A'),
-    ];
-
-    const rowH = maxRowHeight(cells);
-
-    if (curY + rowH > pageH - margin) {
-      doc.addPage('l');
-      curY = margin;
-      drawVerticalHeaderRow(headers, curY, headerH);
-      curY += headerH;
-    }
-
-    drawRow(cells, curY, rowH, false, true);
-    curY += rowH;
-
-    const labelX = margin;
-    const labelW = colW * 1.5;
-    const commentX = margin + labelW;
-    const commentW = pageW - 2 * margin - labelW;
-
-    // Criterion comments (before General Comment)
-    const criterionLabelMap = new Map<string, string>([
-      ['chr', 'CHR'],
-      ['pio', 'PIO'],
-      ...HANDLING_CRITERIA.map((c) => [c.id, c.label] as const),
-      ...dynHeaderOrder.map((c) => [c.id, c.label] as const),
-    ]);
-    const criterionCommentEntries = Object.entries(comments).filter(
-      ([, text]) => typeof text === 'string' && text.trim() !== ''
-    );
-    
-    // Combine all comments into one section
-    const allCommentLines: string[] = [];
-    
-    criterionCommentEntries.forEach(([id, text]) => {
-      const label = criterionLabelMap.get(id) ?? id;
-      const line = `${label}: ${String(text).trim()}`;
-      const wrapped = doc.splitTextToSize(line, commentW - 2);
-      allCommentLines.push(...wrapped);
-    });
-    
-    if (generalComment?.trim()) {
-      const line = `General Comment: ${generalComment.trim()}`;
-      const wrapped = doc.splitTextToSize(line, commentW - 2);
-      allCommentLines.push(...wrapped);
-    }
-    
-    if (allCommentLines.length > 0 && !isCancelled) {
-      const commentH = Math.max(6, allCommentLines.length * lineH + 2);
-
-      if (curY + commentH > pageH - margin) {
-        doc.addPage('l');
-        curY = margin;
-      }
-      
-      // Left label box: "All Comments:"
-      doc.setFontSize(fontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.setDrawColor(180);
-      doc.rect(labelX, curY, labelW, commentH);
-      doc.text('All Comments:', labelX + 1, curY + 4);
-      
-      // Right content box: actual comments
-      doc.setFont('helvetica', 'normal');
-      doc.rect(commentX, curY, commentW, commentH);
-      allCommentLines.forEach((line: string, i: number) => {
-        doc.text(line, commentX + 1, curY + 4 + i * lineH);
+    orderedHandling.forEach((criterion, rIdx) => {
+      x = margin;
+      const bgShade = rIdx % 2 === 0 ? 245 : 235;
+      doc.setFillColor(bgShade, bgShade, bgShade);
+      doc.rect(x, curY, labelColW, rowH, 'F');
+      doc.setDrawColor(180); doc.setLineWidth(0.15); doc.rect(x, curY, labelColW, rowH);
+      doc.setFontSize(fontSize); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30);
+      doc.text(criterion.label, x + 2, curY + 5);
+      x += labelColW;
+      phases.forEach((phase) => {
+        const val = ev[`${criterion.id}${MATRIX_SEP}${phase.id}`];
+        const label = val != null ? resolvePdfLabel(criterion, val) : '—';
+        doc.setFillColor(bgShade, bgShade, bgShade);
+        doc.rect(x, curY, dataColW, rowH, 'F');
+        doc.setDrawColor(180); doc.rect(x, curY, dataColW, rowH);
+        doc.setFontSize(fontSize); doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30);
+        const tw = doc.getTextWidth(label);
+        doc.text(label, x + dataColW / 2 - tw / 2, curY + 5);
+        x += dataColW;
       });
-      
-      curY += commentH;
+      curY += rowH;
+    });
+
+    // Matrix comments
+    const commentW = tableW;
+    const allCommentLines: string[] = [];
+    const criterionLabelMap = new Map<string, string>([['chr', 'CHR'], ['pio', 'PIO'], ...HANDLING_CRITERIA.map((c) => [c.id, c.label] as const)]);
+    Object.entries(comments)
+      .filter(([, text]) => typeof text === 'string' && text.trim() !== '')
+      .forEach(([id, text]) => {
+        const lbl = criterionLabelMap.get(id) ?? id;
+        allCommentLines.push(...doc.splitTextToSize(`${lbl}: ${String(text).trim()}`, commentW - 4));
+      });
+    if (generalComment?.trim()) allCommentLines.push(...doc.splitTextToSize(`General: ${generalComment.trim()}`, commentW - 4));
+    if (allCommentLines.length > 0) {
+      const commentBlockH = Math.max(6, allCommentLines.length * lineH + 2);
+      if (curY + commentBlockH > pageH - margin) { doc.addPage('l'); curY = margin; }
+      doc.setFillColor(250, 250, 250);
+      doc.rect(margin, curY, commentW, commentBlockH, 'F');
+      doc.setDrawColor(180); doc.rect(margin, curY, commentW, commentBlockH);
+      doc.setFontSize(fontSize); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+      allCommentLines.forEach((line: string, i: number) => { doc.text(line, margin + 2, curY + 4 + i * lineH); });
+      curY += commentBlockH;
     }
+    curY += 4;
   });
 
   // ── Narrative Summary Section ──
@@ -509,19 +565,44 @@ export function exportToPdf({
 
     const handlingItems: NarrativeItem[] = [];
     const handlingNA: string[] = [];
-    HANDLING_CRITERIA.forEach((c) => {
-      const item = toNarrItem(c, ev[c.id as keyof Evaluation]);
-      if (item) handlingItems.push(item);
-      else handlingNA.push(c.label);
-    });
-
     const dynamicItems: NarrativeItem[] = [];
     const dynamicNA: string[] = [];
-    dynCriteria.forEach((c) => {
-      const item = toNarrItem(c, ev[c.id]);
-      if (item) dynamicItems.push(item);
-      else dynamicNA.push(c.label);
-    });
+
+    if (isMatrixGridPresentation(tpData?.maneuver ?? null, getHandlingEvalMode(tpData))) {
+      HANDLING_CRITERIA.forEach((c) => {
+        const nums = dynCriteria
+          .map((p) => ev[`${c.id}${MATRIX_SEP}${p.id}`])
+          .filter((v): v is string | number => v != null && String(v) !== 'N/A')
+          .map((v) => Number(v));
+        if (nums.length > 0) {
+          const avg = Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
+          const avgStr = String(avg);
+          const pdfLabel = c.pdfLabels?.[avgStr] ?? avgStr;
+          handlingItems.push({ id: c.id, label: c.label, pdfLabel, value: avg, sentiment: qualitySentiment(avg) });
+        } else { handlingNA.push(c.label); }
+      });
+      dynCriteria.forEach((p) => {
+        const nums = HANDLING_CRITERIA
+          .map((c) => ev[`${c.id}${MATRIX_SEP}${p.id}`])
+          .filter((v): v is string | number => v != null && String(v) !== 'N/A')
+          .map((v) => Number(v));
+        if (nums.length > 0) {
+          const avg = Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
+          const avgStr = String(avg);
+          const pdfLabel = p.pdfLabels?.[avgStr] ?? avgStr;
+          dynamicItems.push({ id: p.id, label: p.label, pdfLabel, value: avg, sentiment: qualitySentiment(avg) });
+        } else { dynamicNA.push(p.label); }
+      });
+    } else {
+      HANDLING_CRITERIA.forEach((c) => {
+        const item = toNarrItem(c, ev[c.id as keyof Evaluation]);
+        if (item) handlingItems.push(item); else handlingNA.push(c.label);
+      });
+      dynCriteria.forEach((c) => {
+        const item = toNarrItem(c, ev[c.id]);
+        if (item) dynamicItems.push(item); else dynamicNA.push(c.label);
+      });
+    }
 
     const paragraphs = buildNarrative({
       maneuverName,
