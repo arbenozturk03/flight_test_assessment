@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { RotateCcw, ChevronRight, MessageSquare, GitBranch, Hash } from 'lucide-react';
+import { RotateCcw, ChevronRight, GitBranch, Hash } from 'lucide-react';
 import { SKIP_VALUE } from '../types';
 
 /* ────────────────────────────────────────────
@@ -263,8 +263,6 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
   const [nodeId, setNodeId] = useState(mode === 'pio' ? PIO_ROOT : CHR_ROOT);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbStep[]>([]);
   const [animKey, setAnimKey] = useState(0);
-  const [commentOpen, setCommentOpen] = useState(false);
-
   const nodes = mode === 'pio' ? PIO_NODES : CHR_NODES;
   const rootId = mode === 'pio' ? PIO_ROOT : CHR_ROOT;
   const currentNodeId = nodeId;
@@ -300,7 +298,6 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
     setBreadcrumb([]);
     onChange(null);
     setAnimKey((k) => k + 1);
-    setCommentOpen(false);
   }, [rootId, onChange, setBreadcrumb, setCurrentNodeId]);
 
   const stepNumber = breadcrumb.length + 1;
@@ -527,7 +524,6 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
     return null;
   };
 
-  const isComplete = numericValue != null || isSkip;
   const showResetBtn = inputMode === 'flowchart' && (!isAtRoot || breadcrumb.length > 0);
 
   const title = mode === 'chr' ? 'Cooper-Harper (CHR)' : 'PIO Rating';
@@ -598,28 +594,16 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
         </div>
       )}
 
-      {/* Comment section */}
-      {isComplete && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setCommentOpen(!commentOpen)}
-            className="flex items-center gap-1.5 text-sm font-medium text-tusas-muted transition-colors hover:text-tusas-text"
-          >
-            <MessageSquare className="h-4 w-4" />
-            {commentOpen ? 'Hide Comment' : comment ? 'Edit Comment' : 'Add Comment'}
-          </button>
-          {commentOpen && (
-            <input
-              type="text"
-              placeholder={`Add a comment for this ${mode === 'pio' ? 'PIO' : 'CHR'} rating...`}
-              value={comment}
-              onChange={(e) => onCommentChange(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-tusas-border bg-tusas-bg px-4 py-2.5 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue"
-            />
-          )}
-        </div>
-      )}
+      <div className="mt-2">
+        <label className="mb-1 block text-xs font-medium text-tusas-muted">Comment</label>
+        <input
+          type="text"
+          placeholder={`Add a comment for this ${mode === 'pio' ? 'PIO' : 'CHR'} rating...`}
+          value={comment}
+          onChange={(e) => onCommentChange(e.target.value)}
+          className="w-full rounded-lg border border-tusas-border bg-tusas-bg px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue"
+        />
+      </div>
     </div>
   );
 }
