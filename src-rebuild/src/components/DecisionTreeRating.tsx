@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { RotateCcw, ChevronRight, GitBranch, Hash } from 'lucide-react';
+import { RotateCcw, GitBranch, Hash } from 'lucide-react';
 import { SKIP_VALUE } from '../types';
 
 /* ────────────────────────────────────────────
@@ -177,10 +177,10 @@ function chrSeverity(v: number): Severity {
 }
 
 const SEVERITY_BG: Record<Severity, string> = {
-  green:  'bg-green-600/20 border-green-600 text-green-400',
-  yellow: 'bg-yellow-500/20 border-yellow-500 text-yellow-400',
-  orange: 'bg-orange-500/20 border-orange-500 text-orange-400',
-  red:    'bg-red-600/20 border-red-600 text-red-400',
+  green:  'bg-green-600/20 border-green-600 text-sev-green',
+  yellow: 'bg-yellow-500/20 border-yellow-500 text-sev-yellow',
+  orange: 'bg-orange-500/20 border-orange-500 text-sev-orange',
+  red:    'bg-red-600/20 border-red-600 text-sev-red',
 };
 
 const SEVERITY_BADGE: Record<Severity, string> = {
@@ -191,45 +191,11 @@ const SEVERITY_BADGE: Record<Severity, string> = {
 };
 
 const SEVERITY_OUTLINE: Record<Severity, string> = {
-  green:  'border-green-600 text-green-400',
-  yellow: 'border-yellow-500 text-yellow-400',
-  orange: 'border-orange-500 text-orange-400',
-  red:    'border-red-600 text-red-400',
+  green:  'border-green-600 text-sev-green',
+  yellow: 'border-yellow-500 text-sev-yellow',
+  orange: 'border-orange-500 text-sev-orange',
+  red:    'border-red-600 text-sev-red',
 };
-
-/* ────────────────────────────────────────────
-   Breadcrumb helpers
-   ──────────────────────────────────────────── */
-
-interface BreadcrumbStep {
-  outcome: string;
-  positive: boolean;
-}
-
-function outcomeLabel(question: string, context: string | undefined, answer: 'Yes' | 'No'): BreadcrumbStep {
-  const key = question + '|' + answer;
-  const outcomes: Record<string, BreadcrumbStep> = {
-    // PIO
-    'Does it cause divergent oscillations?|Yes':        { outcome: 'Control loop → Divergent oscillations',  positive: false },
-    'Does it cause divergent oscillations?|No':         { outcome: 'Control loop → No divergent oscillations', positive: true },
-    'Does it cause oscillations?|Yes':                  { outcome: 'Abrupt maneuvers → Oscillations present', positive: false },
-    'Does it cause oscillations?|No':                   { outcome: 'Abrupt maneuvers → No oscillations',      positive: true },
-    'Are the oscillations divergent?|Yes':              { outcome: 'Oscillations are divergent',               positive: false },
-    'Are the oscillations divergent?|No':               { outcome: 'Oscillations are not divergent',           positive: true },
-    'Do undesirable motions tend to occur?|Yes':        { outcome: 'Undesirable motions present',             positive: false },
-    'Do undesirable motions tend to occur?|No':         { outcome: 'No undesirable motions',                  positive: true },
-    'Is task performance compromised?|Yes':             { outcome: 'Task performance compromised',            positive: false },
-    'Is task performance compromised?|No':              { outcome: 'Task performance not compromised',        positive: true },
-    // CHR
-    'Is it controllable?|Yes':                          { outcome: 'Controllable',                            positive: true },
-    'Is it controllable?|No':                           { outcome: 'Not controllable',                        positive: false },
-    'Is adequate performance attainable with a tolerable pilot workload?|Yes': { outcome: 'Adequate performance attainable', positive: true },
-    'Is adequate performance attainable with a tolerable pilot workload?|No':  { outcome: 'Adequate performance not attainable', positive: false },
-    'Is it satisfactory without improvement?|Yes':      { outcome: 'Satisfactory without improvement',       positive: true },
-    'Is it satisfactory without improvement?|No':       { outcome: 'Not satisfactory — improvement needed',  positive: false },
-  };
-  return outcomes[key] ?? { outcome: `${context ? context + ' → ' : ''}${answer}`, positive: answer === 'Yes' };
-}
 
 /* ────────────────────────────────────────────
    Component
@@ -261,7 +227,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
 }) {
   const [inputMode, setInputMode] = useState<InputMode>('direct');
   const [nodeId, setNodeId] = useState(mode === 'pio' ? PIO_ROOT : CHR_ROOT);
-  const [breadcrumb, setBreadcrumb] = useState<BreadcrumbStep[]>([]);
+  const [stepCount, setStepCount] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const nodes = mode === 'pio' ? PIO_NODES : CHR_NODES;
   const rootId = mode === 'pio' ? PIO_ROOT : CHR_ROOT;
@@ -276,17 +242,17 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
   const numericValue   = typeof value === 'number' ? value : null;
   const isSkip         = value === SKIP_VALUE;
   const isAtRoot       = currentNodeId === rootId;
-  const hasExternalValue = numericValue != null && isAtRoot && breadcrumb.length === 0;
+  const hasExternalValue = numericValue != null && isAtRoot && stepCount === 0;
 
   const handleAnswer = useCallback((answer: 'Yes' | 'No') => {
     if (currentNode.type !== 'question') return;
     const target = answer === 'Yes' ? currentNode.yesTarget : currentNode.noTarget;
-    setBreadcrumb((prev) => [...prev, outcomeLabel(currentNode.question, currentNode.context, answer)]);
+    setStepCount((c) => c + 1);
     setCurrentNodeId(target);
     setAnimKey((k) => k + 1);
     const targetNode = nodes[target];
     if (targetNode.type === 'result') onChange(targetNode.rating);
-  }, [currentNode, nodes, onChange, setBreadcrumb, setCurrentNodeId]);
+  }, [currentNode, nodes, onChange, setCurrentNodeId]);
 
   const handleSelectRating = useCallback((rating: number) => {
     onChange(rating);
@@ -295,12 +261,12 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
 
   const resetWizard = useCallback(() => {
     setCurrentNodeId(rootId);
-    setBreadcrumb([]);
+    setStepCount(0);
     onChange(null);
     setAnimKey((k) => k + 1);
-  }, [rootId, onChange, setBreadcrumb, setCurrentNodeId]);
+  }, [rootId, onChange, setCurrentNodeId]);
 
-  const stepNumber = breadcrumb.length + 1;
+  const stepNumber = stepCount + 1;
   const totalQuestionsApprox = mode === 'pio' ? 5 : 3;
 
   /* ═══════════════════════════════════════════
@@ -348,7 +314,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
         {selectedInfo && selectedSev && (
           <div className={`rounded-lg border p-3 ${SEVERITY_BG[selectedSev]}`}>
             <p className="text-sm font-semibold">{selectedInfo.label}</p>
-            <p className="mt-1 text-sm leading-relaxed opacity-80">{selectedInfo.description}</p>
+            <p className="mt-1 text-sm leading-relaxed">{selectedInfo.description}</p>
           </div>
         )}
       </div>
@@ -358,27 +324,6 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
   /* ═══════════════════════════════════════════
      FLOWCHART MODE — render helpers
      ═══════════════════════════════════════════ */
-
-  const renderBreadcrumb = () => {
-    if (breadcrumb.length === 0) return null;
-    return (
-      <div className="flex flex-wrap items-center gap-1 rounded-lg border border-tusas-border/40 bg-tusas-bg/50 px-2.5 py-1.5">
-        {breadcrumb.map((step, i) => (
-          <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight className="h-3 w-3 text-tusas-muted/30" />}
-            <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium ${
-              step.positive
-                ? 'bg-green-600/10 text-green-400'
-                : 'bg-red-600/10 text-red-400'
-            }`}>
-              <span className="text-xs">{step.positive ? '✓' : '✗'}</span>
-              {step.outcome}
-            </span>
-          </span>
-        ))}
-      </div>
-    );
-  };
 
   const renderQuestion = (node: QuestionNode) => (
     <div key={animKey} className="animate-[fadeInUp_0.25s_ease-out]">
@@ -450,7 +395,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
                 <p className={`text-base font-semibold leading-snug ${selected ? 'text-tusas-text' : 'text-tusas-text/80'}`}>
                   {opt.characteristics}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-tusas-muted">{opt.demands}</p>
+                <p className="mt-1 text-sm leading-relaxed text-tusas-text/70">{opt.demands}</p>
               </div>
             </button>
           );
@@ -470,10 +415,10 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
             {rating}
           </div>
           <div className="text-center">
-            <p className={`text-base font-bold ${sev === 'green' ? 'text-green-400' : sev === 'yellow' ? 'text-yellow-400' : sev === 'orange' ? 'text-orange-400' : 'text-red-400'}`}>
+            <p className={`text-base font-bold ${sev === 'green' ? 'text-sev-green' : sev === 'yellow' ? 'text-sev-yellow' : sev === 'orange' ? 'text-sev-orange' : 'text-sev-red'}`}>
               {info.label}
             </p>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-tusas-muted">
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-tusas-text/70">
               {info.description}
             </p>
           </div>
@@ -495,7 +440,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
           {info && (
             <>
               <p className="text-base font-semibold text-tusas-text">{info.label}</p>
-              <p className="mt-0.5 text-sm leading-relaxed text-tusas-muted line-clamp-2">{info.description}</p>
+              <p className="mt-0.5 text-sm leading-relaxed text-tusas-text/70">{info.description}</p>
             </>
           )}
         </div>
@@ -524,7 +469,7 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
     return null;
   };
 
-  const showResetBtn = inputMode === 'flowchart' && (!isAtRoot || breadcrumb.length > 0);
+  const showResetBtn = inputMode === 'flowchart' && (!isAtRoot || stepCount > 0);
 
   const title = mode === 'chr' ? 'Cooper-Harper (CHR)' : 'PIO Rating';
   const badgeVal = numericValue != null ? numericValue : null;
@@ -573,7 +518,6 @@ function SingleRating({ mode, value, onChange, hasError, comment, onCommentChang
       </div>
 
       {/* Breadcrumb trail (flowchart only) */}
-      {inputMode === 'flowchart' && renderBreadcrumb()}
 
       {/* Content area */}
       <div className={inputMode === 'flowchart' ? 'min-h-[120px]' : ''}>

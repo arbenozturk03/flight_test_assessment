@@ -5,11 +5,11 @@ import { SKIP_VALUE } from '../types';
 /* Color arrays: index 0 = rating '1' (best/green) … index 4 = rating '5' (worst/red) */
 
 const BORDER_INACTIVE = [
-  'border-green-500 text-green-400 hover:bg-green-500/10',
-  'border-lime-500 text-lime-400 hover:bg-lime-500/10',
-  'border-yellow-500 text-yellow-400 hover:bg-yellow-500/10',
-  'border-orange-500 text-orange-400 hover:bg-orange-500/10',
-  'border-red-500 text-red-400 hover:bg-red-500/10',
+  'border-green-500 text-sev-green hover:bg-green-500/10',
+  'border-lime-500 text-sev-lime hover:bg-lime-500/10',
+  'border-yellow-500 text-sev-yellow hover:bg-yellow-500/10',
+  'border-orange-500 text-sev-orange hover:bg-orange-500/10',
+  'border-red-500 text-sev-red hover:bg-red-500/10',
 ];
 
 const BORDER_ACTIVE = [
@@ -30,11 +30,11 @@ const POPUP_BADGE = [
 ];
 
 const POPUP_LABEL = [
-  'text-green-400',
-  'text-lime-400',
-  'text-yellow-400',
-  'text-orange-400',
-  'text-red-400',
+  'text-sev-green',
+  'text-sev-lime',
+  'text-sev-yellow',
+  'text-sev-orange',
+  'text-sev-red',
 ];
 
 const SELECTED_BORDER = [
@@ -54,11 +54,11 @@ const SELECTED_BG = [
 ];
 
 const CHECK_COLOR = [
-  'text-green-400',
-  'text-lime-400',
-  'text-yellow-400',
-  'text-orange-400',
-  'text-red-400',
+  'text-sev-green',
+  'text-sev-lime',
+  'text-sev-yellow',
+  'text-sev-orange',
+  'text-sev-red',
 ];
 
 interface OptionSelectorProps {
@@ -162,20 +162,20 @@ export default function OptionSelector({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setInfoOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-[700px] rounded-xl border border-[#1e293b] bg-[#111827] shadow-2xl"
+            className="relative w-full max-w-[700px] rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#1e293b] px-7 py-5">
-              <h3 className="text-xl font-semibold text-white">{label}</h3>
+            <div className="flex items-center justify-between border-b border-tusas-panel-border px-7 py-5">
+              <h3 className="text-xl font-semibold text-tusas-text">{label}</h3>
               <button
                 type="button"
                 onClick={() => setInfoOpen(false)}
-                className="text-slate-400 transition-colors hover:text-white"
+                className="text-tusas-muted transition-colors hover:text-tusas-text"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="divide-y divide-[#1e293b]">
+            <div className="divide-y divide-tusas-panel-border">
               {visibleOptions.map((opt, idx) => {
                 const colorIdx = Math.min(idx, POPUP_BADGE.length - 1);
                 const shortLabel = pdfLabels?.[opt] ?? '';
@@ -183,7 +183,7 @@ export default function OptionSelector({
                 if (!shortLabel && !longDesc) return null;
                 const isSelected = opt === value;
                 return (
-                  <div key={opt} className={`px-7 py-4 transition-colors ${isSelected ? `${SELECTED_BG[colorIdx]} border-l-[3px] ${SELECTED_BORDER[colorIdx]}` : 'hover:bg-[#181e2d]'}`}>
+                  <div key={opt} className={`px-7 py-4 transition-colors ${isSelected ? `${SELECTED_BG[colorIdx]} border-l-[3px] ${SELECTED_BORDER[colorIdx]}` : 'hover:bg-tusas-panel-hover'}`}>
                     <div className="flex gap-3.5">
                       <div className="flex items-start pt-px">
                         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold ${POPUP_BADGE[colorIdx]}`}>
@@ -195,7 +195,7 @@ export default function OptionSelector({
                           {shortLabel}
                         </span>
                         {longDesc && (
-                          <p className="mt-0.5 text-[14px] leading-relaxed text-slate-400">
+                          <p className="mt-0.5 text-[14px] leading-relaxed text-tusas-muted">
                             {longDesc}
                           </p>
                         )}

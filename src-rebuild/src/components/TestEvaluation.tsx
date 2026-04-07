@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Copy,
   Download,
+  GitBranch,
   Hash,
   LayoutGrid,
   Pencil,
@@ -27,6 +28,12 @@ import {
   isMatrixManeuver,
 } from '../data';
 import OptionSelector from './OptionSelector';
+import { getHandlingQualitativeTree } from '../data/ftaQualitativeTrees';
+import QualitativeDecisionTree from './QualitativeDecisionTree';
+import MatrixEvaluation from './MatrixEvaluation';
+import DecisionTreeRating from './DecisionTreeRating';
+import GeneralEvaluationSummary from './GeneralEvaluationSummary';
+import TusasLogo from './TusasLogo';
 
 /** Trim → maneuver dynamics → handling (non-trim), same order as non-matrix TPs. */
 function ClassicHandlingEvaluators({
@@ -91,10 +98,82 @@ function ClassicHandlingEvaluators({
     </>
   );
 }
-import MatrixEvaluation from './MatrixEvaluation';
-import DecisionTreeRating from './DecisionTreeRating';
-import GeneralEvaluationSummary from './GeneralEvaluationSummary';
-import TusasLogo from './TusasLogo';
+
+/** FTA PDF trees for general headings (trim + handling) only; maneuver phases use direct 1–5 selectors. */
+function TreeHandlingEvaluators({
+  currentTestPoint,
+  currentManeuver,
+  currentEval,
+  errorFieldIds,
+  updateField,
+  updateComment,
+  comments,
+}: {
+  currentTestPoint: number;
+  currentManeuver: string;
+  currentEval: Evaluation;
+  errorFieldIds: string[];
+  updateField: (field: string, value: string | number | null) => void;
+  updateComment: (fieldId: string, text: string) => void;
+  comments: Record<string, string>;
+}) {
+  return (
+    <div className="space-y-5">
+      {HANDLING_CRITERIA.filter((c) => c.id === 'trim').map((c) => {
+        const { nodes, rootId } = getHandlingQualitativeTree(c);
+        return (
+          <QualitativeDecisionTree
+            key={`${currentTestPoint}-${c.id}`}
+            fieldId={c.id}
+            label={c.label}
+            value={currentEval[c.id as keyof Evaluation] as string | null}
+            onChange={(v) => updateField(c.id, v)}
+            hasError={errorFieldIds.includes(c.id)}
+            comment={comments[c.id] ?? ''}
+            onCommentChange={(t) => updateComment(c.id, t)}
+            nodes={nodes}
+            rootId={rootId}
+            pdfLabels={c.pdfLabels}
+            longDescriptions={c.longDescriptions}
+          />
+        );
+      })}
+      {getManeuverCriteria(currentManeuver).map((c) => (
+        <OptionSelector
+          key={`${currentTestPoint}-${c.id}`}
+          label={c.label}
+          value={(currentEval[c.id] ?? null) as string | null}
+          options={c.options}
+          onChange={(v) => updateField(c.id, v)}
+          hasError={errorFieldIds.includes(c.id)}
+          comment={comments[c.id] ?? ''}
+          onCommentChange={(t) => updateComment(c.id, t)}
+          pdfLabels={c.pdfLabels}
+          longDescriptions={c.longDescriptions}
+        />
+      ))}
+      {HANDLING_CRITERIA.filter((c) => c.id !== 'trim').map((c) => {
+        const { nodes, rootId } = getHandlingQualitativeTree(c);
+        return (
+          <QualitativeDecisionTree
+            key={`${currentTestPoint}-${c.id}`}
+            fieldId={c.id}
+            label={c.label}
+            value={currentEval[c.id as keyof Evaluation] as string | null}
+            onChange={(v) => updateField(c.id, v)}
+            hasError={errorFieldIds.includes(c.id)}
+            comment={comments[c.id] ?? ''}
+            onCommentChange={(t) => updateComment(c.id, t)}
+            nodes={nodes}
+            rootId={rootId}
+            pdfLabels={c.pdfLabels}
+            longDescriptions={c.longDescriptions}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 const ACTIVE = 'border-[#003366] bg-[#003366] text-white';
 const INACTIVE = 'border-tusas-border bg-tusas-surface text-tusas-text hover:border-tusas-blue';
@@ -142,6 +221,10 @@ export default function TestEvaluation({
   const isCancelled =
     currentTestPoint != null ? cancelled.includes(currentTestPoint) : false;
   const handlingEvalMode = getHandlingEvalMode(currentData);
+  const handlingFormMode =
+    currentManeuver && !isMatrixManeuver(currentManeuver) && handlingEvalMode === 'matrix'
+      ? 'sequential'
+      : handlingEvalMode;
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -490,10 +573,10 @@ export default function TestEvaluation({
                       <h3 className="text-base font-bold text-tusas-text">
                         Handling evaluation
                       </h3>
-                      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
+                      <div className="flex shrink-0 flex-wrap items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
                         <button
                           type="button"
-                          title="Direct — sequential list (trim, maneuver phases, handling)"
+                          title="Direct — 1–5 scale per criterion"
                           onClick={() =>
                             emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
                           }
@@ -505,6 +588,21 @@ export default function TestEvaluation({
                         >
                           <Hash className="h-3.5 w-3.5" />
                           <span className="hidden sm:inline">Direct</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Flowchart — FTA yes/no decision trees (trim, phases, handling)"
+                          onClick={() =>
+                            emitUpdate({ handlingEvalMode: 'tree', matrixEvalPresentation: undefined })
+                          }
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                            handlingEvalMode === 'tree'
+                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                        >
+                          <GitBranch className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Flowchart</span>
                         </button>
                         <button
                           type="button"
@@ -523,7 +621,7 @@ export default function TestEvaluation({
                         </button>
                       </div>
                     </div>
-                    {handlingEvalMode === 'sequential' ? (
+                    {handlingFormMode === 'sequential' ? (
                       <div className="space-y-6">
                         <ClassicHandlingEvaluators
                           currentManeuver={currentManeuver}
@@ -534,6 +632,16 @@ export default function TestEvaluation({
                           comments={currentData?.comments ?? {}}
                         />
                       </div>
+                    ) : handlingFormMode === 'tree' ? (
+                      <TreeHandlingEvaluators
+                        currentTestPoint={currentTestPoint!}
+                        currentManeuver={currentManeuver}
+                        currentEval={currentEval}
+                        errorFieldIds={errorFieldIds}
+                        updateField={updateField}
+                        updateComment={updateComment}
+                        comments={currentData?.comments ?? {}}
+                      />
                     ) : (
                       (() => {
                         const phases = getManeuverCriteria(currentManeuver);
@@ -563,15 +671,64 @@ export default function TestEvaluation({
                     )}
                   </section>
                 ) : (
-                  <section className="min-w-0 space-y-6 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                    <ClassicHandlingEvaluators
-                      currentManeuver={currentManeuver}
-                      currentEval={currentEval}
-                      errorFieldIds={errorFieldIds}
-                      updateField={updateField}
-                      updateComment={updateComment}
-                      comments={currentData?.comments ?? {}}
-                    />
+                  <section className="min-w-0 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-base font-bold text-tusas-text">Handling evaluation</h3>
+                      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
+                        <button
+                          type="button"
+                          title="Direct — 1–5 scale per criterion"
+                          onClick={() =>
+                            emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
+                          }
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                            handlingEvalMode === 'sequential'
+                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                        >
+                          <Hash className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Direct</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Flowchart — FTA yes/no decision trees"
+                          onClick={() =>
+                            emitUpdate({ handlingEvalMode: 'tree', matrixEvalPresentation: undefined })
+                          }
+                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                            handlingEvalMode === 'tree'
+                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                              : 'text-tusas-muted hover:text-tusas-text'
+                          }`}
+                        >
+                          <GitBranch className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Flowchart</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-6">
+                      {handlingFormMode === 'tree' ? (
+                        <TreeHandlingEvaluators
+                          currentTestPoint={currentTestPoint!}
+                          currentManeuver={currentManeuver}
+                          currentEval={currentEval}
+                          errorFieldIds={errorFieldIds}
+                          updateField={updateField}
+                          updateComment={updateComment}
+                          comments={currentData?.comments ?? {}}
+                        />
+                      ) : (
+                        <ClassicHandlingEvaluators
+                          currentManeuver={currentManeuver}
+                          currentEval={currentEval}
+                          errorFieldIds={errorFieldIds}
+                          updateField={updateField}
+                          updateComment={updateComment}
+                          comments={currentData?.comments ?? {}}
+                        />
+                      )}
+                    </div>
                   </section>
                 )}
 

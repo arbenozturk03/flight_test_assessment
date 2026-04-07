@@ -29,11 +29,11 @@ const BADGE_RING = [
 ];
 
 const POP_INACTIVE = [
-  'border-green-500/40 text-green-400 hover:bg-green-500/20',
-  'border-lime-500/40 text-lime-400 hover:bg-lime-500/20',
-  'border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/20',
-  'border-orange-500/40 text-orange-400 hover:bg-orange-500/20',
-  'border-red-500/40 text-red-400 hover:bg-red-500/20',
+  'border-green-500/40 text-sev-green hover:bg-green-500/20',
+  'border-lime-500/40 text-sev-lime hover:bg-lime-500/20',
+  'border-yellow-500/40 text-sev-yellow hover:bg-yellow-500/20',
+  'border-orange-500/40 text-sev-orange hover:bg-orange-500/20',
+  'border-red-500/40 text-sev-red hover:bg-red-500/20',
 ];
 
 const POPUP_BADGE = [
@@ -43,7 +43,7 @@ const POPUP_BADGE = [
   'bg-orange-500 text-white',
   'bg-red-500 text-white',
 ];
-const POPUP_LABEL = ['text-green-400', 'text-lime-400', 'text-yellow-400', 'text-orange-400', 'text-red-400'];
+const POPUP_LABEL = ['text-sev-green', 'text-sev-lime', 'text-sev-yellow', 'text-sev-orange', 'text-sev-red'];
 
 const POP_W = 230;
 const POP_PAD = 24;
@@ -264,7 +264,7 @@ export default function MatrixEvaluation({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-[#0d1520] border-b border-r border-tusas-border px-4 py-3 text-left text-xs font-semibold text-tusas-muted w-48 min-w-[12rem]" />
+              <th className="sticky left-0 z-10 bg-tusas-matrix-head border-b border-r border-tusas-border px-4 py-3 text-left text-xs font-semibold text-tusas-muted w-48 min-w-[12rem]" />
               {phases.map((phase) => {
                 const isActiveCol = activeCell?.col === phase.id;
                 return (
@@ -273,7 +273,7 @@ export default function MatrixEvaluation({
                     className={`border-b border-r border-tusas-border px-3 py-3 text-center text-xs font-semibold transition-colors duration-200 ${
                       isActiveCol
                         ? 'bg-blue-500/15 text-blue-300'
-                        : 'bg-[#0d1520] text-tusas-muted'
+                        : 'bg-tusas-matrix-head text-tusas-muted'
                     }`}
                   >
                     {phase.label}
@@ -289,7 +289,7 @@ export default function MatrixEvaluation({
               const hasAnyError = phases.some((p) =>
                 errorCellKeys.has(`${criterion.id}__${p.id}`),
               );
-              const rowBg = rowIdx % 2 === 0 ? 'bg-tusas-surface' : 'bg-[#0f1a28]';
+              const rowBg = rowIdx % 2 === 0 ? 'bg-tusas-surface' : 'bg-tusas-matrix-row-alt';
 
               const completedCount = phases.filter((p) => {
                 const v = getValue(criterion.id, p.id);
@@ -388,7 +388,7 @@ export default function MatrixEvaluation({
             ref={scalePopRef}
             id="fta-matrix-scale-popover"
             style={scalePopoverStyle(activeCell.top, activeCell.left, activeCell.obscured)}
-            className="rounded-lg border border-[#2a3548] bg-[#151d2c] p-1 [box-shadow:0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+            className="rounded-lg border border-tusas-popover-border bg-tusas-popover-bg p-1 shadow-xl"
           >
             <div className="flex items-center gap-[3px]">
               {['1', '2', '3', '4', '5'].map((opt, idx) => {
@@ -413,7 +413,7 @@ export default function MatrixEvaluation({
                   </button>
                 );
               })}
-              <div className="mx-px h-4 w-px shrink-0 bg-[#2a3548]" />
+              <div className="mx-px h-4 w-px shrink-0 bg-tusas-popover-border" />
               <button
                 type="button"
                 onClick={() => {
@@ -442,22 +442,22 @@ export default function MatrixEvaluation({
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-[700px] rounded-xl border border-[#1e293b] bg-[#111827] shadow-2xl"
+            className="relative w-full max-w-[700px] rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#1e293b] px-7 py-5">
-              <h3 className="text-xl font-semibold text-white">
+            <div className="flex items-center justify-between border-b border-tusas-panel-border px-7 py-5">
+              <h3 className="text-xl font-semibold text-tusas-text">
                 {infoCriterion.label}
               </h3>
               <button
                 type="button"
                 onClick={() => setInfoOpen(null)}
-                className="text-slate-400 transition-colors hover:text-white"
+                className="text-tusas-muted transition-colors hover:text-tusas-text"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="divide-y divide-[#1e293b]">
+            <div className="divide-y divide-tusas-panel-border">
               {['1', '2', '3', '4', '5'].map((opt, idx) => {
                 const colorIdx = Math.min(idx, 4);
                 const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
@@ -466,7 +466,7 @@ export default function MatrixEvaluation({
                 return (
                   <div
                     key={opt}
-                    className="px-7 py-4 transition-colors hover:bg-[#181e2d]"
+                    className="px-7 py-4 transition-colors hover:bg-tusas-panel-hover"
                   >
                     <div className="flex gap-3.5">
                       <span
@@ -481,7 +481,7 @@ export default function MatrixEvaluation({
                           {shortLabel}
                         </span>
                         {longDesc && (
-                          <p className="mt-0.5 text-[14px] leading-relaxed text-slate-400">
+                          <p className="mt-0.5 text-[14px] leading-relaxed text-tusas-muted">
                             {longDesc}
                           </p>
                         )}

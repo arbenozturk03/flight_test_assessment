@@ -7,10 +7,10 @@ import { DebouncedInput } from './DebouncedInput';
 type ColorKey = 'green' | 'yellow' | 'orange' | 'red';
 
 const OUTLINE: Record<ColorKey, string> = {
-  green: 'border-green-600 text-green-400',
-  yellow: 'border-yellow-500 text-yellow-400',
-  orange: 'border-orange-500 text-orange-400',
-  red: 'border-red-600 text-red-400',
+  green: 'border-green-600 text-sev-green',
+  yellow: 'border-yellow-500 text-sev-yellow',
+  orange: 'border-orange-500 text-sev-orange',
+  red: 'border-red-600 text-sev-red',
 };
 
 const FILLED: Record<ColorKey, string> = {
@@ -61,10 +61,10 @@ export default function RatingsPanel({ ratings }: RatingsPanelProps) {
             const hasVal = cfg.value != null && cfg.value !== SKIP_VALUE;
             const badgeColor = hasVal ? cfg.valueColors(Number(cfg.value)) : 'green';
             const badgeInactive: Record<ColorKey, string> = {
-              green:  'bg-green-600/20 text-green-400',
-              yellow: 'bg-yellow-500/20 text-yellow-400',
-              orange: 'bg-orange-500/20 text-orange-400',
-              red:    'bg-red-600/20 text-red-400',
+              green:  'bg-green-600/20 text-sev-green',
+              yellow: 'bg-yellow-500/20 text-sev-yellow',
+              orange: 'bg-orange-500/20 text-sev-orange',
+              red:    'bg-red-600/20 text-sev-red',
             };
             const showError = cfg.hasError && !hasVal;
             const tabCls = activeTab === i
@@ -165,10 +165,10 @@ export default function RatingsPanel({ ratings }: RatingsPanelProps) {
 /* ─── Flowchart View ─── */
 
 const COLOR_CLASSES: Record<ColorKey, { bg: string; text: string; border: string }> = {
-  green:  { bg: 'bg-green-600',  text: 'text-green-400',  border: 'border-green-600' },
-  yellow: { bg: 'bg-yellow-500', text: 'text-yellow-400', border: 'border-yellow-500' },
-  orange: { bg: 'bg-orange-500', text: 'text-orange-400', border: 'border-orange-500' },
-  red:    { bg: 'bg-red-600',    text: 'text-red-400',    border: 'border-red-600' },
+  green:  { bg: 'bg-green-600',  text: 'text-sev-green',  border: 'border-green-600' },
+  yellow: { bg: 'bg-yellow-500', text: 'text-sev-yellow', border: 'border-yellow-500' },
+  orange: { bg: 'bg-orange-500', text: 'text-sev-orange', border: 'border-orange-500' },
+  red:    { bg: 'bg-red-600',    text: 'text-sev-red',    border: 'border-red-600' },
 };
 
 interface FlowchartViewProps {
@@ -221,7 +221,7 @@ function FlowchartView({ tree, totalSteps, descriptions, onApply, valueColors }:
       <div className="space-y-5">
         {/* Breadcrumb */}
         {breadcrumb && (
-          <div className="rounded-lg bg-[#1a2332] px-4 py-2.5">
+          <div className="rounded-lg bg-tusas-bg px-4 py-2.5">
             <p className={`text-xs font-medium ${cc.text}`}>
               <XIcon className="mr-1.5 inline h-3 w-3" />
               {breadcrumb}
@@ -235,7 +235,7 @@ function FlowchartView({ tree, totalSteps, descriptions, onApply, valueColors }:
             <span className="text-2xl font-bold text-white">{result}</span>
           </div>
           {desc && <p className={`text-base font-bold ${cc.text}`}>{desc.label}</p>}
-          {desc && <p className="mx-auto mt-2 max-w-lg text-sm text-tusas-muted leading-relaxed">{desc.description}</p>}
+          {desc && <p className="mx-auto mt-2 max-w-lg text-sm text-tusas-text/70 leading-relaxed">{desc.description}</p>}
         </div>
 
         {/* Start Over */}
@@ -277,8 +277,8 @@ function FlowchartView({ tree, totalSteps, descriptions, onApply, valueColors }:
 
       {/* Context bar */}
       {currentNode.context && (
-        <div className="rounded-lg bg-[#1a2332] px-4 py-2.5">
-          <p className="text-xs font-medium text-gray-300">{currentNode.context}</p>
+        <div className="rounded-lg bg-tusas-bg px-4 py-2.5">
+          <p className="text-xs font-medium text-tusas-muted">{currentNode.context}</p>
         </div>
       )}
 
@@ -296,7 +296,7 @@ function FlowchartView({ tree, totalSteps, descriptions, onApply, valueColors }:
             const borderColor = isPositive
               ? 'border-green-600 hover:bg-green-600/10'
               : 'border-red-600 hover:bg-red-600/10';
-            const textColor = isPositive ? 'text-green-400' : 'text-red-400';
+            const textColor = isPositive ? 'text-sev-green' : 'text-sev-red';
             const Icon = isYes ? Check : XIcon;
             return (
               <button

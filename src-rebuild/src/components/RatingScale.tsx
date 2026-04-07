@@ -7,10 +7,10 @@ import DecisionTreeModal from './DecisionTreeModal';
 type ColorKey = 'green' | 'yellow' | 'orange' | 'red';
 
 const OUTLINE: Record<ColorKey, string> = {
-  green: 'border-green-600 text-green-400',
-  yellow: 'border-yellow-500 text-yellow-400',
-  orange: 'border-orange-500 text-orange-400',
-  red: 'border-red-600 text-red-400',
+  green: 'border-green-600 text-sev-green',
+  yellow: 'border-yellow-500 text-sev-yellow',
+  orange: 'border-orange-500 text-sev-orange',
+  red: 'border-red-600 text-sev-red',
 };
 
 const FILLED: Record<ColorKey, string> = {

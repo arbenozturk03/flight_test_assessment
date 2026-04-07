@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { RotateCcw, XCircle } from 'lucide-react';
+import { Moon, RotateCcw, Sun, XCircle } from 'lucide-react';
+import { useTheme } from './theme/ThemeContext';
 import type { Evaluations, TestPointData } from './types';
-import { createDefaultEvaluation, getHandlingEvalMode, isEvaluationComplete } from './data';
+import { createDefaultEvaluation, getHandlingEvalMode, isEvaluationComplete, isMatrixGridPresentation, getManeuverCriteria, HANDLING_CRITERIA, MATRIX_SEP } from './data';
 import { exportToPdf } from './exportPdf';
 import TusasLogo from './components/TusasLogo';
 import ManeuverSetup from './components/ManeuverSetup';
@@ -10,6 +11,7 @@ import TestEvaluation from './components/TestEvaluation';
 type Step = 1 | 2;
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [step, setStep] = useState<Step>(1);
   const [flightTestNumber, setFlightTestNumber] = useState('');
   const [selectedFTEs, setSelectedFTEs] = useState<string[]>([]);
@@ -83,10 +85,40 @@ export default function App() {
     ) {
       setCompleted((prev) => (prev.includes(tp) ? prev : [...prev, tp]));
       setCancelled((prev) => prev.filter((x) => x !== tp));
+    } else {
+      setCompleted((prev) => prev.filter((x) => x !== tp));
     }
   };
 
+  const getIncompleteMatrixTPs = (): { tp: number; emptyCount: number }[] => {
+    const result: { tp: number; emptyCount: number }[] = [];
+    for (let tp = 1; tp <= (testPointCount ?? 0); tp++) {
+      if (cancelled.includes(tp)) continue;
+      const tpData = evaluations[tp];
+      if (!tpData?.maneuver) continue;
+      const mode = getHandlingEvalMode(tpData);
+      if (!isMatrixGridPresentation(tpData.maneuver, mode)) continue;
+      const ev = tpData.evaluation || createDefaultEvaluation();
+      let empty = 0;
+      const phases = getManeuverCriteria(tpData.maneuver);
+      for (const h of HANDLING_CRITERIA) {
+        for (const p of phases) {
+          if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null) empty++;
+        }
+      }
+      if (empty > 0) result.push({ tp, emptyCount: empty });
+    }
+    return result;
+  };
+
   const handleFinish = () => {
+    const gaps = getIncompleteMatrixTPs();
+    if (gaps.length > 0) {
+      const list = gaps.map((g) => `  Test Point ${g.tp}: ${g.emptyCount} empty cell(s)`).join('\n');
+      if (!window.confirm(
+        `Warning: The following test points use Matrix mode with empty cells:\n\n${list}\n\nExport PDF anyway?`,
+      )) return;
+    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -103,7 +135,26 @@ export default function App() {
   };
 
   const handleAbortAndSave = () => {
-    handleFinish();
+    const gaps = getIncompleteMatrixTPs();
+    if (gaps.length > 0) {
+      const list = gaps.map((g) => `  Test Point ${g.tp}: ${g.emptyCount} empty cell(s)`).join('\n');
+      if (!window.confirm(
+        `Warning: The following test points use Matrix mode with empty cells:\n\n${list}\n\nExport PDF anyway?`,
+      )) return;
+    }
+    const endTime = new Date();
+    exportToPdf({
+      flightTestNumber,
+      selectedFTEs,
+      selectedTPs,
+      maneuverPool: selectedManeuvers,
+      testPointCount: testPointCount!,
+      evaluations,
+      completed,
+      cancelled,
+      startTime: startTime ?? endTime,
+      endTime,
+    });
     setShowAbortConfirm(false);
     resetMission();
   };
@@ -131,15 +182,9 @@ export default function App() {
   };
 
   return (
-    <div
-      className="relative flex h-[100dvh] w-full max-w-[100vw] flex-col overflow-x-hidden"
-      style={{ backgroundColor: '#0a0a0a' }}
-    >
+    <div className="relative flex h-[100dvh] w-full max-w-[100vw] flex-col overflow-x-hidden bg-tusas-bg">
       {/* Header */}
-      <header
-        className="relative z-50 shrink-0 min-w-0 border-b border-tusas-border bg-[#0a0a0a] px-4 py-3"
-        style={{ backgroundColor: '#0a0a0a' }}
-      >
+      <header className="relative z-50 shrink-0 min-w-0 border-b border-tusas-border bg-tusas-bg px-4 py-3">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <TusasLogo className="h-9 w-auto shrink-0" />
@@ -148,26 +193,43 @@ export default function App() {
             </span>
           </div>
 
-          {step === 2 && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={resetMission}
-                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Mission
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAbortConfirm(true)}
-                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
-              >
-                <XCircle className="h-4 w-4" />
-                Abort &amp; Save
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Beyaz tema' : 'Koyu tema'}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-tusas-border bg-tusas-surface text-tusas-text transition-colors hover:bg-tusas-bg"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-amber-400" aria-hidden />
+              ) : (
+                <Moon className="h-5 w-5 text-tusas-blue" aria-hidden />
+              )}
+              <span className="sr-only">
+                {theme === 'dark' ? 'Açık tema' : 'Koyu tema'}
+              </span>
+            </button>
+            {step === 2 && (
+              <>
+                <button
+                  type="button"
+                  onClick={resetMission}
+                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Mission
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAbortConfirm(true)}
+                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Abort &amp; Save
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

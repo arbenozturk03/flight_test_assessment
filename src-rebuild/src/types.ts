@@ -49,10 +49,10 @@ export interface TestPointData {
   comments: Record<string, string>;
   generalComment: string;
   /**
-   * Matrix-capable maneuvers: `sequential` = trim → dynamics → handling (compact);
-   * `matrix` = full phase × criteria grid.
+   * Matrix-capable maneuvers: `sequential` = direct 1–5 selectors; `tree` = FTA yes/no decision trees;
+   * `matrix` = phase × criteria grid. Non-matrix TPs use `sequential` | `tree` only.
    */
-  handlingEvalMode?: 'sequential' | 'matrix';
+  handlingEvalMode?: 'sequential' | 'tree' | 'matrix';
   /** @deprecated Use `handlingEvalMode`. `direct` was matrix, `flowchart` was sequential. */
   matrixEvalPresentation?: 'direct' | 'flowchart';
 }

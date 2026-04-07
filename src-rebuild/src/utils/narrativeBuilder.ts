@@ -17,6 +17,20 @@ export interface NarrativeItem {
   sentiment: Sentiment;
 }
 
+export interface MatrixCellData {
+  phaseLabel: string;
+  pdfLabel: string;
+  value: number;
+  sentiment: Sentiment;
+}
+
+export interface MatrixRowData {
+  handlingId: string;
+  handlingLabel: string;
+  cells: MatrixCellData[];
+  overallSentiment: Sentiment;
+}
+
 export interface NarrativeInput {
   maneuverName: string;
   tp: number;
@@ -28,6 +42,8 @@ export interface NarrativeInput {
   dynamicNA: string[];
   comments: Record<string, string>;
   generalComment?: string;
+  matrixRows?: MatrixRowData[];
+  matrixNACells?: string[];
 }
 
 /* ─── Sentiment ─────────────────────────────────────────── */
@@ -107,6 +123,98 @@ function buildResultSentence(
     return `Surprisingly, despite the favorable traits, the maneuver required ${resultStr}.`;
   }
   return `Overall, the maneuver required ${resultStr}.`;
+}
+
+/* ─── Matrix (per-cell) section builder ────────────────── */
+
+function mCellDesc(c: MatrixCellData): string {
+  return `${c.pdfLabel.toLowerCase()} during ${c.phaseLabel.toLowerCase()}`;
+}
+
+function describeRowPhases(cells: MatrixCellData[]): string {
+  const good = cells.filter((c) => c.sentiment !== 'negative');
+  const bad = cells.filter((c) => c.sentiment === 'negative');
+
+  if (bad.length === 0 || good.length === 0) {
+    return joinList(cells.map(mCellDesc));
+  }
+  return `${joinList(good.map(mCellDesc))}, while it was ${joinList(bad.map(mCellDesc))}`;
+}
+
+function buildMatrixResultSentence(
+  compRow: MatrixRowData | undefined,
+  workloadRow: MatrixRowData | undefined,
+  trailingTraitSentiment: 'positive' | 'negative' | 'none',
+): string {
+  const parts: string[] = [];
+  if (compRow && compRow.cells.length > 0)
+    parts.push(`pilot compensation was ${describeRowPhases(compRow.cells)}`);
+  if (workloadRow && workloadRow.cells.length > 0)
+    parts.push(`workload was ${describeRowPhases(workloadRow.cells)}`);
+  if (parts.length === 0) return '';
+
+  const allPositive = [compRow, workloadRow]
+    .filter(Boolean)
+    .every((r) => r!.overallSentiment === 'positive');
+
+  if (trailingTraitSentiment === 'negative' && allPositive) {
+    return `Despite these issues, ${parts.join(', while ')}.`;
+  }
+  if (trailingTraitSentiment === 'negative' && !allPositive) {
+    return `Consequently, ${parts.join(', and ')}.`;
+  }
+  if (trailingTraitSentiment === 'positive' && !allPositive) {
+    return `Surprisingly, despite the favorable traits, ${parts.join(', and ')}.`;
+  }
+  return `Overall, ${parts.join(', while ')}.`;
+}
+
+function buildMatrixSection(
+  traitRows: MatrixRowData[],
+  compRow: MatrixRowData | undefined,
+  workloadRow: MatrixRowData | undefined,
+): string {
+  if (traitRows.length === 0 && !compRow && !workloadRow) return '';
+
+  const sentences: string[] = [];
+  let prevNeg: boolean | null = null;
+  let ci = 0;
+
+  for (const row of traitRows) {
+    if (row.cells.length === 0) continue;
+
+    const curNeg = row.overallSentiment === 'negative';
+    const flipped = prevNeg !== null && prevNeg !== curNeg;
+    const phaseDesc = describeRowPhases(row.cells);
+
+    if (ci === 0) {
+      sentences.push(
+        `According to the pilot's assessment, regarding ${row.handlingLabel.toLowerCase()}, performance was rated as ${phaseDesc}.`,
+      );
+    } else if (flipped && curNeg) {
+      sentences.push(
+        `${pick(posToNegBridges, ci)}, regarding ${row.handlingLabel.toLowerCase()}, the assessment indicated ${phaseDesc}.`,
+      );
+    } else if (flipped && !curNeg) {
+      sentences.push(
+        `${pick(negToPosBridges, ci)}, ${row.handlingLabel.toLowerCase()} was assessed as ${phaseDesc}.`,
+      );
+    } else {
+      sentences.push(
+        `${pick(curNeg ? negContinuations : posContinuations, ci)}, ${row.handlingLabel.toLowerCase()} was rated as ${phaseDesc}.`,
+      );
+    }
+
+    prevNeg = curNeg;
+    ci++;
+  }
+
+  const trail: 'positive' | 'negative' | 'none' =
+    prevNeg === true ? 'negative' : prevNeg === false ? 'positive' : 'none';
+  const res = buildMatrixResultSentence(compRow, workloadRow, trail);
+  if (res) sentences.push(res);
+
+  return sentences.join(' ');
 }
 
 /* ─── Chunking & grammatical helpers ────────────────────── */
@@ -227,41 +335,65 @@ export function buildNarrative(input: NarrativeInput): string[] {
   const out: string[] = [];
   const comments = input.comments;
 
-  /* ── Part 1 — Unified assessment (Trim → Dynamics → Handling) ── */
+  /* ── Part 1 — Assessment paragraph ── */
 
-  const trimItem = input.handlingItems.find((i) => i.id === 'trim');
-  const handlingNoTrim = input.handlingItems.filter((i) => i.id !== 'trim');
-  const workloadItem = handlingNoTrim.find((i) => i.id === 'workload');
-  const compItem = handlingNoTrim.find((i) => i.id === 'pilotCompensation');
-  const traitItems = handlingNoTrim.filter(
-    (i) => i.id !== 'workload' && i.id !== 'pilotCompensation',
-  );
+  if (input.matrixRows && input.matrixRows.length > 0) {
+    /* ── Matrix path: per-cell narrative ── */
+    const compRow = input.matrixRows.find((r) => r.handlingId === 'pilotCompensation');
+    const workloadRow = input.matrixRows.find((r) => r.handlingId === 'workload');
+    const traitRows = input.matrixRows.filter(
+      (r) => r.handlingId !== 'pilotCompensation' && r.handlingId !== 'workload',
+    );
 
-  const allItems: TaggedItem[] = [];
-  if (trimItem) allItems.push({ item: trimItem, type: 'handling' });
-  input.dynamicItems.forEach((item) => allItems.push({ item, type: 'dynamic' }));
-  traitItems.forEach((item) => allItems.push({ item, type: 'handling' }));
-
-  if (allItems.length > 0 || workloadItem || compItem) {
-    const para = buildUnifiedSection(allItems, compItem, workloadItem);
+    const para = buildMatrixSection(traitRows, compRow, workloadRow);
     if (para) out.push(para);
-  }
 
-  const allEvalItems = [
-    ...(trimItem ? [trimItem] : []),
-    ...input.dynamicItems,
-    ...handlingNoTrim,
-  ];
-  const evalRemarks = allEvalItems
-    .filter((i) => comments[i.id]?.trim())
-    .map((i) => `${i.label}: "${comments[i.id].trim()}"`);
-  if (evalRemarks.length > 0) {
-    out.push(`The pilot additionally remarked — ${evalRemarks.join('; ')}.`);
-  }
+    const matrixRemarks = input.matrixRows
+      .filter((r) => comments[r.handlingId]?.trim())
+      .map((r) => `${r.handlingLabel}: "${comments[r.handlingId].trim()}"`);
+    if (matrixRemarks.length > 0) {
+      out.push(`The pilot additionally remarked — ${matrixRemarks.join('; ')}.`);
+    }
 
-  const allNA = [...input.handlingNA, ...input.dynamicNA];
-  if (allNA.length > 0) {
-    out.push(`No assessment was provided for ${joinList(allNA)}.`);
+    if (input.matrixNACells && input.matrixNACells.length > 0) {
+      out.push(`No assessment was provided for ${joinList(input.matrixNACells)}.`);
+    }
+  } else {
+    /* ── Sequential / tree path (existing) ── */
+    const trimItem = input.handlingItems.find((i) => i.id === 'trim');
+    const handlingNoTrim = input.handlingItems.filter((i) => i.id !== 'trim');
+    const workloadItem = handlingNoTrim.find((i) => i.id === 'workload');
+    const compItem = handlingNoTrim.find((i) => i.id === 'pilotCompensation');
+    const traitItems = handlingNoTrim.filter(
+      (i) => i.id !== 'workload' && i.id !== 'pilotCompensation',
+    );
+
+    const allItems: TaggedItem[] = [];
+    if (trimItem) allItems.push({ item: trimItem, type: 'handling' });
+    input.dynamicItems.forEach((item) => allItems.push({ item, type: 'dynamic' }));
+    traitItems.forEach((item) => allItems.push({ item, type: 'handling' }));
+
+    if (allItems.length > 0 || workloadItem || compItem) {
+      const para = buildUnifiedSection(allItems, compItem, workloadItem);
+      if (para) out.push(para);
+    }
+
+    const allEvalItems = [
+      ...(trimItem ? [trimItem] : []),
+      ...input.dynamicItems,
+      ...handlingNoTrim,
+    ];
+    const evalRemarks = allEvalItems
+      .filter((i) => comments[i.id]?.trim())
+      .map((i) => `${i.label}: "${comments[i.id].trim()}"`);
+    if (evalRemarks.length > 0) {
+      out.push(`The pilot additionally remarked — ${evalRemarks.join('; ')}.`);
+    }
+
+    const allNA = [...input.handlingNA, ...input.dynamicNA];
+    if (allNA.length > 0) {
+      out.push(`No assessment was provided for ${joinList(allNA)}.`);
+    }
   }
 
   /* ── Part 4 — CHR & PIO Final Ratings ── */

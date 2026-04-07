@@ -13,7 +13,7 @@ import {
   getHandlingEvalMode,
 } from './data';
 import { buildNarrative, qualitySentiment } from './utils/narrativeBuilder';
-import type { NarrativeItem } from './utils/narrativeBuilder';
+import type { NarrativeItem, MatrixRowData, MatrixCellData } from './utils/narrativeBuilder';
 
 interface ExportOptions {
   flightTestNumber: string;
@@ -241,25 +241,34 @@ export function exportToPdf({
     });
   };
 
-  // Separate TPs into classic wide table vs per-TP matrix grid
-  const classicTps = allTps.filter((tp) => {
+  const isClassicPresentationTp = (tp: number) => {
     const td = evaluations[tp];
     const mn = td?.maneuver ?? null;
     if (!isMatrixManeuver(mn)) return true;
-    return getHandlingEvalMode(td) === 'sequential';
-  });
-  const matrixTps = allTps.filter((tp) => {
+    return getHandlingEvalMode(td) !== 'matrix';
+  };
+  const isMatrixPresentationTp = (tp: number) => {
     const td = evaluations[tp];
     return isMatrixGridPresentation(td?.maneuver ?? null, getHandlingEvalMode(td));
-  });
+  };
 
-  // ── Classic table ──
-  if (classicTps.length > 0 && maxDynCols > 0) {
-    const classicHeaderH = 25;
-    drawClassicVerticalHeader(classicHeaders, curY, classicHeaderH);
-    curY += classicHeaderH;
+  const classicHeaderH = 25;
+  /** False after a matrix block; next classic TP redraws the vertical header (new table run). */
+  let classicTableOpen = false;
 
-    classicTps.forEach((tp) => {
+  // ── Classic rows + matrix grids: Test Point 1, 2, … N ──
+  for (const tp of allTps) {
+    if (isClassicPresentationTp(tp) && maxDynCols > 0) {
+      if (!classicTableOpen) {
+        if (curY + classicHeaderH > pageH - margin) {
+          doc.addPage('l');
+          curY = margin;
+        }
+        drawClassicVerticalHeader(classicHeaders, curY, classicHeaderH);
+        curY += classicHeaderH;
+        classicTableOpen = true;
+      }
+
       const tpData = evaluations[tp];
       const isCancelled = cancelled.includes(tp);
       const cancelledVal = 'C';
@@ -300,7 +309,6 @@ export function exportToPdf({
       drawClassicRow(cells, curY, rH, false, true);
       curY += rH;
 
-      // Comments
       if (!isCancelled) {
         const commentW = pageW - 2 * margin;
         const labelW = classicColW * 1.5;
@@ -334,12 +342,13 @@ export function exportToPdf({
           curY += commentH;
         }
       }
-    });
-    curY += 4;
-  }
+      continue;
+    }
 
-  // ── Matrix tables ──
-  matrixTps.forEach((tp) => {
+    if (!isMatrixPresentationTp(tp)) continue;
+
+    classicTableOpen = false;
+
     const tpData = evaluations[tp];
     const isCancelled = cancelled.includes(tp);
     const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
@@ -363,7 +372,9 @@ export function exportToPdf({
     if (isCancelled) {
       doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 50, 50);
       doc.text('This test point was cancelled.', margin, curY + 3);
-      doc.setTextColor(0, 0, 0); curY += 8; return;
+      doc.setTextColor(0, 0, 0);
+      curY += 8;
+      continue;
     }
 
     doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
@@ -432,7 +443,9 @@ export function exportToPdf({
       curY += commentBlockH;
     }
     curY += 4;
-  });
+  }
+
+  if (classicTableOpen) curY += 4;
 
   // ── Narrative Summary Section ──
   doc.addPage('l');
@@ -567,32 +580,39 @@ export function exportToPdf({
     const handlingNA: string[] = [];
     const dynamicItems: NarrativeItem[] = [];
     const dynamicNA: string[] = [];
+    let matrixRows: MatrixRowData[] | undefined;
+    let matrixNACells: string[] | undefined;
 
     if (isMatrixGridPresentation(tpData?.maneuver ?? null, getHandlingEvalMode(tpData))) {
+      matrixRows = [];
+      matrixNACells = [];
       HANDLING_CRITERIA.forEach((c) => {
-        const nums = dynCriteria
-          .map((p) => ev[`${c.id}${MATRIX_SEP}${p.id}`])
-          .filter((v): v is string | number => v != null && String(v) !== 'N/A')
-          .map((v) => Number(v));
-        if (nums.length > 0) {
-          const avg = Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
-          const avgStr = String(avg);
-          const pdfLabel = c.pdfLabels?.[avgStr] ?? avgStr;
-          handlingItems.push({ id: c.id, label: c.label, pdfLabel, value: avg, sentiment: qualitySentiment(avg) });
-        } else { handlingNA.push(c.label); }
+        const cells: MatrixCellData[] = [];
+        dynCriteria.forEach((p) => {
+          const raw = ev[`${c.id}${MATRIX_SEP}${p.id}`];
+          if (raw != null && String(raw) !== 'N/A') {
+            const v = Number(raw);
+            cells.push({
+              phaseLabel: p.label,
+              pdfLabel: c.pdfLabels?.[String(raw)] ?? String(raw),
+              value: v,
+              sentiment: qualitySentiment(v),
+            });
+          } else {
+            matrixNACells!.push(`${c.label} – ${p.label}`);
+          }
+        });
+        if (cells.length > 0) {
+          const avg = cells.reduce((s, cl) => s + cl.value, 0) / cells.length;
+          matrixRows!.push({
+            handlingId: c.id,
+            handlingLabel: c.label,
+            cells,
+            overallSentiment: qualitySentiment(Math.round(avg)),
+          });
+        }
       });
-      dynCriteria.forEach((p) => {
-        const nums = HANDLING_CRITERIA
-          .map((c) => ev[`${c.id}${MATRIX_SEP}${p.id}`])
-          .filter((v): v is string | number => v != null && String(v) !== 'N/A')
-          .map((v) => Number(v));
-        if (nums.length > 0) {
-          const avg = Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
-          const avgStr = String(avg);
-          const pdfLabel = p.pdfLabels?.[avgStr] ?? avgStr;
-          dynamicItems.push({ id: p.id, label: p.label, pdfLabel, value: avg, sentiment: qualitySentiment(avg) });
-        } else { dynamicNA.push(p.label); }
-      });
+      if (matrixNACells.length === 0) matrixNACells = undefined;
     } else {
       HANDLING_CRITERIA.forEach((c) => {
         const item = toNarrItem(c, ev[c.id as keyof Evaluation]);
@@ -615,6 +635,8 @@ export function exportToPdf({
       dynamicNA,
       comments,
       generalComment,
+      matrixRows,
+      matrixNACells,
     });
 
     paragraphs.forEach((p) => writeNarrativeParagraph(p));

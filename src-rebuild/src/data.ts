@@ -284,17 +284,17 @@ export function isMatrixManeuver(name: string | null | undefined): boolean {
   return name != null && MATRIX_MANEUVERS.has(name);
 }
 
-export type HandlingEvalMode = 'sequential' | 'matrix';
+export type HandlingEvalMode = 'sequential' | 'tree' | 'matrix';
 
 /**
- * Matrix TP: sequential = compact list; matrix = grid.
+ * Matrix TP: sequential = direct selectors; tree = FTA decision trees; matrix = grid.
  * Migrates deprecated `matrixEvalPresentation` (`direct` → matrix, `flowchart` → sequential).
  */
 export function getHandlingEvalMode(
   tp: Pick<TestPointData, 'handlingEvalMode' | 'matrixEvalPresentation'> | undefined | null,
 ): HandlingEvalMode {
   const m = tp?.handlingEvalMode;
-  if (m === 'matrix' || m === 'sequential') return m;
+  if (m === 'matrix' || m === 'sequential' || m === 'tree') return m;
   const leg = tp?.matrixEvalPresentation;
   if (leg === 'flowchart') return 'sequential';
   if (leg === 'direct') return 'matrix';
