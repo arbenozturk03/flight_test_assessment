@@ -110,7 +110,7 @@ export const HANDLING_CRITERIA: QualitativeCriterion[] = [
     },
   },
   { id: 'stickForces', label: 'Stick Forces', options: RATING_1_5,
-    pdfLabels: { '1': 'Optimal', '2': 'Well-proportioned', '3': 'Noticeable', '4': 'Heavy', '5': 'Excessive' },
+    pdfLabels: { '1': 'Harmonious', '2': 'Balanced', '3': 'Low', '4': 'Disproportionate', '5': 'High' },
     longDescriptions: {
       '1': 'The forces applied on the flight controls are in perfect harmony with the characteristics of the targeted maneuver. Stick forces are neither light enough to cause over-sensitivity nor heavy enough to require effort; the pilot can execute the maneuver with high precision without experiencing any physical fatigue.',
       '2': 'Control forces are appropriate and balanced for maneuver requirements. The resistance felt in the flight controllers during stick inputs is sufficient for the pilot to perceive the aircraft\'s aerodynamic limits, yet does not create any physical difficulty or attention split. Workload continues at a low level with task safety maintained.',
@@ -272,16 +272,9 @@ const DYNAMIC_CRITERIA_MAP: Record<string, QualitativeCriterion[]> = {
   '1-G Stabilized Push Over':       PUSH_OVER_CRITERIA,
 };
 
-/** Maneuvers that use the matrix evaluation (handling rows × phase columns) */
-export const MATRIX_MANEUVERS = new Set([
-  'Bank Angle Capture and Hold',
-  'Pitch Angle Capture and Hold',
-  'Pitch Tracking',
-  'Pitch and Roll Tracking',
-]);
-
+/** All maneuvers support the matrix evaluation (handling rows × phase columns). */
 export function isMatrixManeuver(name: string | null | undefined): boolean {
-  return name != null && MATRIX_MANEUVERS.has(name);
+  return name != null;
 }
 
 export type HandlingEvalMode = 'sequential' | 'tree' | 'matrix';

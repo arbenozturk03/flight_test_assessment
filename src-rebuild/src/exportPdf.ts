@@ -8,7 +8,6 @@ import {
   resolvePdfLabel,
   MATRIX_HANDLING_ORDER,
   MATRIX_SEP,
-  isMatrixManeuver,
   isMatrixGridPresentation,
   getHandlingEvalMode,
 } from './data';
@@ -243,8 +242,6 @@ export function exportToPdf({
 
   const isClassicPresentationTp = (tp: number) => {
     const td = evaluations[tp];
-    const mn = td?.maneuver ?? null;
-    if (!isMatrixManeuver(mn)) return true;
     return getHandlingEvalMode(td) !== 'matrix';
   };
   const isMatrixPresentationTp = (tp: number) => {

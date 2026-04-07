@@ -25,7 +25,6 @@ import {
   MATRIX_HANDLING_ORDER,
   MATRIX_SEP,
   getHandlingEvalMode,
-  isMatrixManeuver,
 } from '../data';
 import OptionSelector from './OptionSelector';
 import { getHandlingQualitativeTree } from '../data/ftaQualitativeTrees';
@@ -221,10 +220,7 @@ export default function TestEvaluation({
   const isCancelled =
     currentTestPoint != null ? cancelled.includes(currentTestPoint) : false;
   const handlingEvalMode = getHandlingEvalMode(currentData);
-  const handlingFormMode =
-    currentManeuver && !isMatrixManeuver(currentManeuver) && handlingEvalMode === 'matrix'
-      ? 'sequential'
-      : handlingEvalMode;
+  const handlingFormMode = handlingEvalMode;
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -566,75 +562,63 @@ export default function TestEvaluation({
             {/* Evaluation form */}
             {currentManeuver && !isCancelled && (
               <>
-                {/* 1. Evaluation section: Matrix or Classic depending on maneuver */}
-                {isMatrixManeuver(currentManeuver) ? (
-                  <section className="min-w-0 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-base font-bold text-tusas-text">
-                        Handling evaluation
-                      </h3>
-                      <div className="flex shrink-0 flex-wrap items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
-                        <button
-                          type="button"
-                          title="Direct — 1–5 scale per criterion"
-                          onClick={() =>
-                            emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
-                          }
-                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-                            handlingEvalMode === 'sequential'
-                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                              : 'text-tusas-muted hover:text-tusas-text'
-                          }`}
-                        >
-                          <Hash className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Direct</span>
-                        </button>
-                        <button
-                          type="button"
-                          title="Flowchart — FTA yes/no decision trees (trim, phases, handling)"
-                          onClick={() =>
-                            emitUpdate({ handlingEvalMode: 'tree', matrixEvalPresentation: undefined })
-                          }
-                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-                            handlingEvalMode === 'tree'
-                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                              : 'text-tusas-muted hover:text-tusas-text'
-                          }`}
-                        >
-                          <GitBranch className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Flowchart</span>
-                        </button>
-                        <button
-                          type="button"
-                          title="Matrix — full grid (phases × criteria)"
-                          onClick={() =>
-                            emitUpdate({ handlingEvalMode: 'matrix', matrixEvalPresentation: undefined })
-                          }
-                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-                            handlingEvalMode === 'matrix'
-                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                              : 'text-tusas-muted hover:text-tusas-text'
-                          }`}
-                        >
-                          <LayoutGrid className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Matrix</span>
-                        </button>
-                      </div>
+                {/* Handling evaluation – Direct / Flowchart / Matrix for all maneuvers */}
+                <section className="min-w-0 rounded-lg border border-tusas-border bg-tusas-surface p-6">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-base font-bold text-tusas-text">
+                      Handling evaluation
+                    </h3>
+                    <div className="flex shrink-0 flex-wrap items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
+                      <button
+                        type="button"
+                        title="Direct — 1–5 scale per criterion"
+                        onClick={() =>
+                          emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
+                        }
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                          handlingEvalMode === 'sequential'
+                            ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                            : 'text-tusas-muted hover:text-tusas-text'
+                        }`}
+                      >
+                        <Hash className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Direct</span>
+                      </button>
+                      <button
+                        type="button"
+                        title="Flowchart — FTA yes/no decision trees"
+                        onClick={() =>
+                          emitUpdate({ handlingEvalMode: 'tree', matrixEvalPresentation: undefined })
+                        }
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                          handlingEvalMode === 'tree'
+                            ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                            : 'text-tusas-muted hover:text-tusas-text'
+                        }`}
+                      >
+                        <GitBranch className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Flowchart</span>
+                      </button>
+                      <button
+                        type="button"
+                        title="Matrix — full grid (phases × criteria)"
+                        onClick={() =>
+                          emitUpdate({ handlingEvalMode: 'matrix', matrixEvalPresentation: undefined })
+                        }
+                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
+                          handlingEvalMode === 'matrix'
+                            ? 'bg-tusas-surface text-tusas-text shadow-sm'
+                            : 'text-tusas-muted hover:text-tusas-text'
+                        }`}
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Matrix</span>
+                      </button>
                     </div>
-                    {handlingFormMode === 'sequential' ? (
-                      <div className="space-y-6">
-                        <ClassicHandlingEvaluators
-                          currentManeuver={currentManeuver}
-                          currentEval={currentEval}
-                          errorFieldIds={errorFieldIds}
-                          updateField={updateField}
-                          updateComment={updateComment}
-                          comments={currentData?.comments ?? {}}
-                        />
-                      </div>
-                    ) : handlingFormMode === 'tree' ? (
-                      <TreeHandlingEvaluators
-                        currentTestPoint={currentTestPoint!}
+                  </div>
+                  {handlingFormMode === 'sequential' ? (
+                    <div className="space-y-6">
+                      <ClassicHandlingEvaluators
                         currentManeuver={currentManeuver}
                         currentEval={currentEval}
                         errorFieldIds={errorFieldIds}
@@ -642,95 +626,45 @@ export default function TestEvaluation({
                         updateComment={updateComment}
                         comments={currentData?.comments ?? {}}
                       />
-                    ) : (
-                      (() => {
-                        const phases = getManeuverCriteria(currentManeuver);
-                        const orderedHandling = MATRIX_HANDLING_ORDER.map(
-                          (id) => HANDLING_CRITERIA.find((c) => c.id === id)!,
-                        ).filter(Boolean);
-                        const errorKeys = new Set(errorFieldIds);
-                        return (
-                          <MatrixEvaluation
-                            key={`${currentManeuver}-matrix`}
-                            handlingCriteria={orderedHandling}
-                            phases={phases}
-                            getValue={(hId, pId) => {
-                              const v = currentEval[`${hId}${MATRIX_SEP}${pId}`];
-                              return v != null ? String(v) : null;
-                            }}
-                            onValueChange={(hId, pId, v) =>
-                              updateField(`${hId}${MATRIX_SEP}${pId}`, v)
-                            }
-                            getComment={(hId) => currentData?.comments?.[hId] ?? ''}
-                            onCommentChange={(hId, text) => updateComment(hId, text)}
-                            errorCellKeys={errorKeys}
-                            scrollContainerRef={mainContentRef}
-                          />
-                        );
-                      })()
-                    )}
-                  </section>
-                ) : (
-                  <section className="min-w-0 rounded-lg border border-tusas-border bg-tusas-surface p-6">
-                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-base font-bold text-tusas-text">Handling evaluation</h3>
-                      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-tusas-border bg-tusas-bg p-0.5">
-                        <button
-                          type="button"
-                          title="Direct — 1–5 scale per criterion"
-                          onClick={() =>
-                            emitUpdate({ handlingEvalMode: 'sequential', matrixEvalPresentation: undefined })
-                          }
-                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-                            handlingEvalMode === 'sequential'
-                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                              : 'text-tusas-muted hover:text-tusas-text'
-                          }`}
-                        >
-                          <Hash className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Direct</span>
-                        </button>
-                        <button
-                          type="button"
-                          title="Flowchart — FTA yes/no decision trees"
-                          onClick={() =>
-                            emitUpdate({ handlingEvalMode: 'tree', matrixEvalPresentation: undefined })
-                          }
-                          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-medium transition-all ${
-                            handlingEvalMode === 'tree'
-                              ? 'bg-tusas-surface text-tusas-text shadow-sm'
-                              : 'text-tusas-muted hover:text-tusas-text'
-                          }`}
-                        >
-                          <GitBranch className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Flowchart</span>
-                        </button>
-                      </div>
                     </div>
-                    <div className="space-y-6">
-                      {handlingFormMode === 'tree' ? (
-                        <TreeHandlingEvaluators
-                          currentTestPoint={currentTestPoint!}
-                          currentManeuver={currentManeuver}
-                          currentEval={currentEval}
-                          errorFieldIds={errorFieldIds}
-                          updateField={updateField}
-                          updateComment={updateComment}
-                          comments={currentData?.comments ?? {}}
+                  ) : handlingFormMode === 'tree' ? (
+                    <TreeHandlingEvaluators
+                      currentTestPoint={currentTestPoint!}
+                      currentManeuver={currentManeuver}
+                      currentEval={currentEval}
+                      errorFieldIds={errorFieldIds}
+                      updateField={updateField}
+                      updateComment={updateComment}
+                      comments={currentData?.comments ?? {}}
+                    />
+                  ) : (
+                    (() => {
+                      const phases = getManeuverCriteria(currentManeuver);
+                      const orderedHandling = MATRIX_HANDLING_ORDER.map(
+                        (id) => HANDLING_CRITERIA.find((c) => c.id === id)!,
+                      ).filter(Boolean);
+                      const errorKeys = new Set(errorFieldIds);
+                      return (
+                        <MatrixEvaluation
+                          key={`${currentManeuver}-matrix`}
+                          handlingCriteria={orderedHandling}
+                          phases={phases}
+                          getValue={(hId, pId) => {
+                            const v = currentEval[`${hId}${MATRIX_SEP}${pId}`];
+                            return v != null ? String(v) : null;
+                          }}
+                          onValueChange={(hId, pId, v) =>
+                            updateField(`${hId}${MATRIX_SEP}${pId}`, v)
+                          }
+                          getComment={(hId) => currentData?.comments?.[hId] ?? ''}
+                          onCommentChange={(hId, text) => updateComment(hId, text)}
+                          errorCellKeys={errorKeys}
+                          scrollContainerRef={mainContentRef}
                         />
-                      ) : (
-                        <ClassicHandlingEvaluators
-                          currentManeuver={currentManeuver}
-                          currentEval={currentEval}
-                          errorFieldIds={errorFieldIds}
-                          updateField={updateField}
-                          updateComment={updateComment}
-                          comments={currentData?.comments ?? {}}
-                        />
-                      )}
-                    </div>
-                  </section>
-                )}
+                      );
+                    })()
+                  )}
+                </section>
 
                 {/* 3. PIO & CHR Decision Tree Ratings */}
                 <section className="rounded-lg border border-tusas-border bg-tusas-surface p-6">
