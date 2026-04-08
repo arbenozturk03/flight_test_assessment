@@ -255,12 +255,8 @@ export function isEvaluationComplete(
   const mn = maneuverName ?? null;
 
   if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
-    const phases = getManeuverCriteria(mn);
-    for (const h of HANDLING_CRITERIA) {
-      for (const p of phases) {
-        if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null) return false;
-      }
-    }
+    // Matrix mode: empty cells are treated as N/O, not errors
+    return true;
   } else {
     for (const c of HANDLING_CRITERIA) {
       if (ev[c.id as keyof Evaluation] == null) return false;
@@ -282,15 +278,7 @@ export function getMissingFieldLabels(
   if (ev.chr == null) missing.push('CHR');
   const mn = maneuverName ?? null;
 
-  if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
-    const phases = getManeuverCriteria(mn);
-    for (const h of HANDLING_CRITERIA) {
-      for (const p of phases) {
-        if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null)
-          missing.push(`${h.label} × ${p.label}`);
-      }
-    }
-  } else {
+  if (!isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
     HANDLING_CRITERIA.forEach((c) => {
       if (ev[c.id as keyof Evaluation] == null) missing.push(c.label);
     });
@@ -311,15 +299,7 @@ export function getMissingFieldIds(
   if (ev.chr == null) missing.push('chr');
   const mn = maneuverName ?? null;
 
-  if (isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
-    const phases = getManeuverCriteria(mn);
-    for (const h of HANDLING_CRITERIA) {
-      for (const p of phases) {
-        const key = `${h.id}${MATRIX_SEP}${p.id}`;
-        if (ev[key] == null) missing.push(key);
-      }
-    }
-  } else {
+  if (!isMatrixGridPresentation(mn, handlingMode ?? 'sequential')) {
     HANDLING_CRITERIA.forEach((c) => {
       if (ev[c.id as keyof Evaluation] == null) missing.push(c.id);
     });
