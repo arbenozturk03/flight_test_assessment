@@ -173,104 +173,13 @@ export const HANDLING_CRITERIA: QualitativeCriterion[] = [
 
 // Dynamic panel (maneuver-specific – best → mid → worst)
 
-// Shared criteria arrays (doc Table 3: BACH & CT)
-const BACH_CT_CRITERIA: QualitativeCriterion[] = [
-  { id: 'initiation', label: 'Initiation', options: RATING_1_5,
-    pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' },
-    longDescriptions: {
-      '1': 'Lateral stick and pedal forces applied at maneuver initiation are in perfect harmony. The aircraft responds instantly and smoothly to control inputs. No additional correction is needed to achieve the desired roll rate. Cognitive and physical workload is minimal.',
-      '2': 'The aircraft responds to the roll command with a clear, crisp, and immediate reaction. There is predictable coordination between stick and pedal inputs. The targeted roll rate initiates directly, and low-level pilot attention is sufficient at maneuver start.',
-      '3': 'Initial response to the roll command is adequate but lateral control forces are lighter than expected. This may create a tendency to over-command at the start. The pilot must consciously focus on the controls to maintain coordination and achieve a smooth entry. Moderate pilot compensation is required.',
-      '4': 'The aircraft response to the roll command is noticeably slow and sluggish. There is a perceptible delay between stick input and roll rate development. Significantly more control input than expected is required to initiate the targeted roll rate. High pilot compensation is needed for initial coordination.',
-      '5': 'Initiating the roll maneuver requires extremely high physical force. Lateral control forces are extremely heavy and the aircraft exhibits high resistance to commands. The pilot must exert continuous fatiguing physical effort to achieve the desired roll rate and maintain coordination. This creates an unacceptable workload.',
-    },
-  },
-  { id: 'capture', label: 'Capture', options: RATING_1_5,
-    pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Underdamped', '4': 'Slow Damping', '5': 'Oscillatory' },
-    longDescriptions: {
-      '1': 'When the target bank angle is reached, the aircraft settles at the desired angle instantly without any overshoot or oscillation. Roll rate termination is flawless and no corrective input from the pilot is needed. Dynamic response has ideal damping and workload is minimal.',
-      '2': 'The aircraft captures the target bank angle quickly and precisely. Aerodynamic response during roll rate arrest is crisp and the aircraft settles on target decisively. The desired parameter is captured with low workload and high predictability from the pilot\'s perspective.',
-      '3': 'When the target bank angle is reached, the aircraft overshoots slightly beyond the target and exhibits brief oscillations before settling. The pilot must apply small corrective counter-inputs to stop the roll rate exactly at the desired point. Moderate pilot compensation is required.',
-      '4': 'The aircraft exhibits noticeable oscillations while trying to capture the target bank angle, and these oscillations take longer than normal to damp out. Stabilizing at the desired angle is difficult; the pilot must actively and continuously provide corrective commands. This creates a high level of workload.',
-      '5': 'The attempt to capture the target bank angle results in undamped or increasingly severe oscillations. The aircraft cannot be reliably stabilized at the desired angle and drifts persistently beyond the target in both directions. The pilot must continuously apply high-amplitude counter-commands to bring the roll rate under control. This creates an unacceptable level of workload.',
-    },
-  },
-  { id: 'hold', label: 'Hold', options: RATING_1_5,
-    pdfLabels: { '1': 'Locked-in', '2': 'Solid', '3': 'Hesitant (Slip Tendency)', '4': 'Unstable', '5': 'Demanding (Skid Tendency)' },
-    longDescriptions: {
-      '1': 'After capturing the target bank angle, the aircraft locks in at that angle with excellent stability. No deviation in altitude or roll rate is observed. Coordinated turn continues flawlessly. The pilot does not need to provide any corrective input to maintain bank angle or coordination. Cognitive workload is minimal.',
-      '2': 'The aircraft exhibits high stability at the target bank angle. Flight parameters and turn coordination are highly reliable to maintain. Only rare and very small corrective inputs may be needed to stay at the desired angle. The aircraft shows predictable aerodynamic behavior and workload is low.',
-      '3': 'Maintaining the target bank angle requires attention, and a tendency to drift out of the bank or change the angle is observed. During the turn, the aircraft tends to slip inward, requiring the pilot to actively apply rudder (pedal) and lateral control inputs for coordination. Flight parameters can be maintained but this generates a moderate level of pilot compensation.',
-      '4': 'The aircraft exhibits clear instability while maintaining the target bank angle. Persistent deviations occur in flight parameters and coordination begins to deteriorate. The pilot must apply frequent, firm, and noticeable corrective commands to hold the aircraft at the desired angle. The effort to maintain balance creates a high level of pilot compensation and workload.',
-      '5': 'Maintaining the aircraft at the target bank angle is extremely challenging both physically and mentally. A severe outward skid tendency develops during the turn and coordination is completely lost. The pilot must continuously apply broad, high-amplitude counter-commands on the flight controls to maintain altitude and bank angle. This creates an unacceptable level of pilot compensation.',
-    },
-  },
-  { id: 'rollOut', label: 'Roll Out', options: RATING_1_5,
-    pdfLabels: { '1': 'Target', '2': 'Precise', '3': 'Undershoot', '4': 'Significant Error', '5': 'Overshoot' },
-    longDescriptions: {
-      '1': 'The roll-out maneuver is executed flawlessly and the aircraft transitions to the target heading value in straight-and-level flight precisely. No overshoot or undershoot is experienced. Dynamic response damps out instantly. The pilot needs no corrective input; cognitive, physical, and physiological workload is minimal.',
-      '2': 'The aircraft reaches the target heading value with very high sensitivity. The transition to straight-and-level flight is clean and predictable. Only a single small corrective input on the flight controls may be needed to hold the target heading precisely. Maneuver stability is achieved with low pilot workload.',
-      '3': 'During the roll-out, the aircraft shows a tendency to correct early, before reaching the target heading value. The pilot must intervene with an additional roll-axis input during the roll-out to seat the aircraft fully in the intended heading. Target parameters are achieved but this requires a moderate level of pilot compensation.',
-      '4': 'During the roll-out maneuver, a noticeable and large deviation from the target heading value is observed. The aircraft is difficult to settle on the target heading; the pilot must apply pronounced, repetitive, and sequential corrective commands to capture the desired heading direction. This instability creates a high level of pilot compensation and workload.',
-      '5': 'During the roll-out, the aircraft severely exceeds the target heading value and departs the planned track outward. Returning to the desired straight-and-level direction becomes extremely difficult and the pilot must apply aggressive, broad-amplitude counter-commands in the opposite direction. Dynamic control deficiency creates an unacceptable level of workload.',
-    },
-  },
+/** Standard phase columns for matrix evaluation (all maneuvers) */
+const STANDARD_PHASE_CRITERIA: QualitativeCriterion[] = [
+  { id: 'initiation',  label: 'Initiation',  options: RATING_1_5, pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' } },
+  { id: 'capture',     label: 'Capture',     options: RATING_1_5, pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Underdamped', '4': 'Slow Damping', '5': 'Oscillatory' } },
+  { id: 'steadyState', label: 'Steady State', options: RATING_1_5, pdfLabels: { '1': 'Locked-in', '2': 'Solid', '3': 'Hesitant', '4': 'Unstable', '5': 'Demanding Workload' } },
+  { id: 'recovery',    label: 'Recovery',    options: RATING_1_5, pdfLabels: { '1': 'On-target', '2': 'Precise', '3': 'Undershoot', '4': 'Significant Error', '5': 'Overshoot' } },
 ];
-
-// Shared criteria (doc Table 4: PRT & PT)
-const TRACKING_CRITERIA: QualitativeCriterion[] = [
-  { id: 'grossAcquisition', label: 'Gross Acquisition',       options: RATING_1_5, pdfLabels: { '1': 'Steady / Natural', '2': 'Direct', '3': 'Sluggish / Unpredictable', '4': 'Delayed', '5': 'Abrupt / Too Aggressive' } },
-  { id: 'fineTracking',     label: 'Fine Tracking',           options: RATING_1_5, pdfLabels: { '1': 'Pinpoint Precision', '2': 'High Accuracy', '3': 'Drifting / Undershoot', '4': 'Loose', '5': 'Jumpy' } },
-  { id: 'dynamicTracking',  label: 'Dynamic Tracking',        options: RATING_1_5, pdfLabels: { '1': 'Stays with Target', '2': 'Minor Lag', '3': 'Falls Behind Target', '4': 'Significant Lag', '5': 'Too Aggressive' } },
-  { id: 'taskTermination',  label: 'Task Termination',        options: RATING_1_5, pdfLabels: { '1': 'Smooth', '2': 'Controlled', '3': 'Moderate', '4': 'Rough', '5': 'Harsh' } },
-];
-
-// Shared criteria (doc Table 5: LACC & LDEC)
-const ACCEL_DECEL_CRITERIA: QualitativeCriterion[] = [
-  { id: 'powerApplication',       label: 'Power Application',        options: RATING_1_5, pdfLabels: { '1': 'Neutral / Predictable', '2': 'Symmetrical', '3': 'Left Yaw / Very Slow', '4': 'Noticeable Swerve', '5': 'Right Yaw / Abrupt' } },
-  { id: 'dynamicAccelDecel',      label: 'Dynamic Accel / Decel',    options: RATING_1_5, pdfLabels: { '1': 'Manageable', '2': 'Predictable', '3': 'Unpredictable', '4': 'High Workload', '5': 'Heavy Rudder' } },
-  { id: 'targetSpeedCapture',     label: 'Target Speed Capture',     options: RATING_1_5, pdfLabels: { '1': 'Predictable', '2': 'Positive', '3': 'Slow', '4': 'Lagging', '5': 'Abrupt' } },
-  { id: 'highSpeedStabilization', label: 'High Speed Stabilization', options: RATING_1_5, pdfLabels: { '1': 'Easy', '2': 'Straightforward', '3': 'Difficult', '4': 'High Effort', '5': 'Sensitive' } },
-];
-
-// Shared criteria (doc Table 6: IF & IFPU)
-const INVERTED_FLIGHT_CRITERIA: QualitativeCriterion[] = [
-  { id: 'rollInitiation',       label: 'Roll Initiation',       options: RATING_1_5, pdfLabels: { '1': 'Moderate', '2': 'Natural', '3': 'Slow', '4': 'Lagging', '5': 'Abrupt' } },
-  { id: 'invertedCapture',      label: 'Inverted Capture',      options: RATING_1_5, pdfLabels: { '1': 'Holds', '2': 'Solid', '3': 'Sinks', '4': 'Significant Drop', '5': 'Over-Push' } },
-  { id: 'steadyState',          label: 'Steady State',          options: RATING_1_5, pdfLabels: { '1': 'Stable', '2': 'Constant', '3': 'Neutrally', '4': 'Oscillatory', '5': 'Divergent' } },
-  { id: 'controlEffectiveness', label: 'Control Effectiveness', options: RATING_1_5, pdfLabels: { '1': 'Effective', '2': 'Responsive', '3': 'Sluggish', '4': 'Marginal', '5': 'Sensitive' } },
-  { id: 'recovery',             label: 'Recovery',              options: RATING_1_5, pdfLabels: { '1': 'Symmetric to Entry', '2': 'Proportional', '3': 'Slower than Entry', '4': 'Disproportional', '5': 'Faster than Entry' } },
-];
-
-// Shared criteria (doc Table 7: LGT & CMT)
-const GEAR_CLAW_CRITERIA: QualitativeCriterion[] = [
-  { id: 'initiation',           label: 'Initiation',                options: RATING_1_5, pdfLabels: { '1': 'None', '2': 'Negligible', '3': 'Nose Drop', '4': 'Distinct', '5': 'Nose Up' } },
-  { id: 'clawTransition',       label: 'Claw Transition',           options: RATING_1_5, pdfLabels: { '1': 'Ideal', '2': 'Fluid', '3': 'Insufficient', '4': 'Rough', '5': 'Excessive' } },
-  { id: 'transientPitchChange', label: 'Transient in Pitch Change', options: RATING_1_5, pdfLabels: { '1': 'Manageable', '2': 'Predictable', '3': 'Slow', '4': 'Sudden', '5': 'Abrupt' } },
-  { id: 'stabilization',        label: 'Stabilization (Speed)',     options: RATING_1_5, pdfLabels: { '1': 'Expected Drag', '2': 'Consistent', '3': 'Massive Drag', '4': 'Excessive Decel', '5': 'Minimal Drag' } },
-];
-
-const PUSH_OVER_CRITERIA: QualitativeCriterion[] = [
-  { id: 'pushOverInitiation', label: 'Push Over Initiation', options: RATING_1_5, pdfLabels: { '1': 'Proportional', '2': 'Linear', '3': 'Light', '4': 'Firm', '5': 'Heavy' } },
-  { id: 'targetCapture',      label: 'Target Capture',       options: RATING_1_5, pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Oscillates', '4': 'Slow Damping', '5': 'Hard Stop' } },
-  { id: 'dive',               label: 'Dive',                 options: RATING_1_5, pdfLabels: { '1': 'Proportional', '2': 'Steady', '3': 'Sluggish', '4': 'Erratic', '5': 'Abrupt' } },
-  { id: 'recoveryPullForce',  label: 'Recovery Pull Force',  options: RATING_1_5, pdfLabels: { '1': 'Symmetric to Push', '2': 'Balanced', '3': 'Lighter than Push', '4': 'Disproportionate', '5': 'Heavier than Push' } },
-];
-
-const DYNAMIC_CRITERIA_MAP: Record<string, QualitativeCriterion[]> = {
-  'Bank Angle Capture and Hold':    BACH_CT_CRITERIA,
-  'Pitch Angle Capture and Hold':   BACH_CT_CRITERIA,
-  'Coordinated Turn':               BACH_CT_CRITERIA,
-  'Pitch and Roll Tracking':        TRACKING_CRITERIA,
-  'Pitch Tracking':                 TRACKING_CRITERIA,
-  'Level Acceleration':             ACCEL_DECEL_CRITERIA,
-  'Level Deceleration':             ACCEL_DECEL_CRITERIA,
-  'Inverted Flight':                INVERTED_FLIGHT_CRITERIA,
-  'Inverted Flight with Pull Up':   INVERTED_FLIGHT_CRITERIA,
-  'Landing Gear Transition':        GEAR_CLAW_CRITERIA,
-  'Claw Mode Transition':           GEAR_CLAW_CRITERIA,
-  '1-G Stabilized Push Over':       PUSH_OVER_CRITERIA,
-};
 
 /** All maneuvers support the matrix evaluation (handling rows × phase columns). */
 export function isMatrixManeuver(name: string | null | undefined): boolean {
@@ -302,16 +211,8 @@ export function isMatrixGridPresentation(
   return isMatrixManeuver(maneuverName) && mode === 'matrix';
 }
 
-const DEFAULT_DYNAMIC_CRITERIA: QualitativeCriterion[] = [
-  { id: 'initiation', label: 'Initiation', options: RATING_1_5, pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' } },
-  { id: 'capture',    label: 'Capture',    options: RATING_1_5, pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Underdamped', '4': 'Slow Damping', '5': 'Oscillatory' } },
-  { id: 'hold',       label: 'Hold',       options: RATING_1_5, pdfLabels: { '1': 'Locked-in', '2': 'Solid', '3': 'Hesitant', '4': 'Unstable', '5': 'Demanding Workload' } },
-  { id: 'rollOut',    label: 'Roll Out',   options: RATING_1_5, pdfLabels: { '1': 'On-target', '2': 'Precise', '3': 'Undershoot', '4': 'Significant Error', '5': 'Overshoot' } },
-];
-
-export function getManeuverCriteria(maneuverName: string | null): QualitativeCriterion[] {
-  if (!maneuverName) return DEFAULT_DYNAMIC_CRITERIA;
-  return DYNAMIC_CRITERIA_MAP[maneuverName] ?? DEFAULT_DYNAMIC_CRITERIA;
+export function getManeuverCriteria(_maneuverName: string | null): QualitativeCriterion[] {
+  return STANDARD_PHASE_CRITERIA;
 }
 
 /** Matrix evaluation separator */
