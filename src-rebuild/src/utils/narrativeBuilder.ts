@@ -356,7 +356,7 @@ export function buildNarrative(input: NarrativeInput): string[] {
     }
 
     if (input.matrixNACells && input.matrixNACells.length > 0) {
-      out.push(`No assessment was provided for ${joinList(input.matrixNACells)}.`);
+      out.push(`The following cells were marked N/O (No Observation): ${joinList(input.matrixNACells)}.`);
     }
   } else {
     /* ── Sequential / tree path (existing) ── */

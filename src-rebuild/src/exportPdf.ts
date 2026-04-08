@@ -406,7 +406,7 @@ export function exportToPdf({
       x += labelColW;
       phases.forEach((phase) => {
         const val = ev[`${criterion.id}${MATRIX_SEP}${phase.id}`];
-        const label = val != null ? resolvePdfLabel(criterion, val) : '—';
+        const label = val != null ? resolvePdfLabel(criterion, val) : 'N/O';
         doc.setFillColor(bgShade, bgShade, bgShade);
         doc.rect(x, curY, dataColW, rowH, 'F');
         doc.setDrawColor(180); doc.rect(x, curY, dataColW, rowH);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Moon, RotateCcw, Sun, XCircle } from 'lucide-react';
 import { useTheme } from './theme/ThemeContext';
 import type { Evaluations, TestPointData } from './types';
-import { createDefaultEvaluation, getHandlingEvalMode, isEvaluationComplete, isMatrixGridPresentation, getManeuverCriteria, HANDLING_CRITERIA, MATRIX_SEP } from './data';
+import { createDefaultEvaluation, getHandlingEvalMode, isEvaluationComplete } from './data';
 import { exportToPdf } from './exportPdf';
 import TusasLogo from './components/TusasLogo';
 import ManeuverSetup from './components/ManeuverSetup';
@@ -90,35 +90,7 @@ export default function App() {
     }
   };
 
-  const getIncompleteMatrixTPs = (): { tp: number; emptyCount: number }[] => {
-    const result: { tp: number; emptyCount: number }[] = [];
-    for (let tp = 1; tp <= (testPointCount ?? 0); tp++) {
-      if (cancelled.includes(tp)) continue;
-      const tpData = evaluations[tp];
-      if (!tpData?.maneuver) continue;
-      const mode = getHandlingEvalMode(tpData);
-      if (!isMatrixGridPresentation(tpData.maneuver, mode)) continue;
-      const ev = tpData.evaluation || createDefaultEvaluation();
-      let empty = 0;
-      const phases = getManeuverCriteria(tpData.maneuver);
-      for (const h of HANDLING_CRITERIA) {
-        for (const p of phases) {
-          if (ev[`${h.id}${MATRIX_SEP}${p.id}`] == null) empty++;
-        }
-      }
-      if (empty > 0) result.push({ tp, emptyCount: empty });
-    }
-    return result;
-  };
-
   const handleFinish = () => {
-    const gaps = getIncompleteMatrixTPs();
-    if (gaps.length > 0) {
-      const list = gaps.map((g) => `  Test Point ${g.tp}: ${g.emptyCount} empty cell(s)`).join('\n');
-      if (!window.confirm(
-        `Warning: The following test points use Matrix mode with empty cells:\n\n${list}\n\nExport PDF anyway?`,
-      )) return;
-    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -135,13 +107,6 @@ export default function App() {
   };
 
   const handleAbortAndSave = () => {
-    const gaps = getIncompleteMatrixTPs();
-    if (gaps.length > 0) {
-      const list = gaps.map((g) => `  Test Point ${g.tp}: ${g.emptyCount} empty cell(s)`).join('\n');
-      if (!window.confirm(
-        `Warning: The following test points use Matrix mode with empty cells:\n\n${list}\n\nExport PDF anyway?`,
-      )) return;
-    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
