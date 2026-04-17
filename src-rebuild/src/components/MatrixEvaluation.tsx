@@ -464,28 +464,28 @@ export default function MatrixEvaluation({
       {infoOpen && infoCriterion?.longDescriptions &&
         createPortal(
           <div
-            className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4"
             onClick={() => setInfoOpen(null)}
           >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div
-              className="relative flex max-h-[85vh] w-full max-w-[700px] flex-col rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
+              className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-[640px] flex-col overflow-hidden rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex shrink-0 items-center justify-between border-b border-tusas-panel-border px-7 py-4">
-                <h3 className="text-xl font-semibold text-tusas-text">
+              <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-tusas-panel-border bg-tusas-panel px-5 py-3">
+                <h3 className="text-lg font-semibold text-tusas-text">
                   {infoCriterion.label}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setInfoOpen(null)}
-                  className="rounded-md p-1.5 text-tusas-muted transition-colors hover:bg-tusas-panel-hover hover:text-tusas-text"
+                  className="rounded-md p-2 text-tusas-muted transition-colors hover:bg-tusas-panel-hover hover:text-tusas-text"
                   aria-label="Close"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 divide-y divide-tusas-panel-border overflow-y-auto">
+              <div className="min-h-0 flex-1 divide-y divide-tusas-panel-border overflow-y-auto overscroll-contain">
                 {['1', '2', '3', '4', '5'].map((opt, idx) => {
                   const colorIdx = Math.min(idx, 4);
                   const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
@@ -494,22 +494,22 @@ export default function MatrixEvaluation({
                   return (
                     <div
                       key={opt}
-                      className="px-7 py-3.5 transition-colors hover:bg-tusas-panel-hover"
+                      className="px-5 py-2.5 transition-colors hover:bg-tusas-panel-hover"
                     >
-                      <div className="flex gap-3.5">
+                      <div className="flex gap-3">
                         <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold ${POPUP_BADGE[colorIdx]}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-bold ${POPUP_BADGE[colorIdx]}`}
                         >
                           {opt}
                         </span>
-                        <div className="min-w-0 -mt-px flex-1">
+                        <div className="min-w-0 flex-1">
                           <span
-                            className={`block text-[15px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
+                            className={`block text-[13px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
                           >
                             {shortLabel}
                           </span>
                           {longDesc && (
-                            <p className="mt-1 text-[13px] leading-relaxed text-tusas-muted">
+                            <p className="mt-1 text-[12px] leading-snug text-tusas-muted">
                               {longDesc}
                             </p>
                           )}
