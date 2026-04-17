@@ -257,6 +257,15 @@ export default function MatrixEvaluation({
     return () => document.removeEventListener('mousedown', onDown);
   }, [activeCell]);
 
+  useEffect(() => {
+    if (!infoOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setInfoOpen(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [infoOpen]);
+
   const scaleOverlayValue =
     activeCell != null ? getValue(activeCell.row, activeCell.col) : null;
 
@@ -452,66 +461,68 @@ export default function MatrixEvaluation({
         )}
 
       {/* Info modal */}
-      {infoOpen && infoCriterion?.longDescriptions && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setInfoOpen(null)}
-        >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {infoOpen && infoCriterion?.longDescriptions &&
+        createPortal(
           <div
-            className="relative flex max-h-[90vh] w-full max-w-[700px] flex-col rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+            onClick={() => setInfoOpen(null)}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-tusas-panel-border px-7 py-4">
-              <h3 className="text-xl font-semibold text-tusas-text">
-                {infoCriterion.label}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setInfoOpen(null)}
-                className="rounded-md p-1.5 text-tusas-muted transition-colors hover:bg-tusas-panel-hover hover:text-tusas-text"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 divide-y divide-tusas-panel-border overflow-y-auto">
-              {['1', '2', '3', '4', '5'].map((opt, idx) => {
-                const colorIdx = Math.min(idx, 4);
-                const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
-                const longDesc = infoCriterion.longDescriptions?.[opt] ?? '';
-                if (!shortLabel && !longDesc) return null;
-                return (
-                  <div
-                    key={opt}
-                    className="px-7 py-3.5 transition-colors hover:bg-tusas-panel-hover"
-                  >
-                    <div className="flex gap-3.5">
-                      <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold ${POPUP_BADGE[colorIdx]}`}
-                      >
-                        {opt}
-                      </span>
-                      <div className="min-w-0 -mt-px flex-1">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative flex max-h-[85vh] w-full max-w-[700px] flex-col rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-tusas-panel-border px-7 py-4">
+                <h3 className="text-xl font-semibold text-tusas-text">
+                  {infoCriterion.label}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(null)}
+                  className="rounded-md p-1.5 text-tusas-muted transition-colors hover:bg-tusas-panel-hover hover:text-tusas-text"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 divide-y divide-tusas-panel-border overflow-y-auto">
+                {['1', '2', '3', '4', '5'].map((opt, idx) => {
+                  const colorIdx = Math.min(idx, 4);
+                  const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
+                  const longDesc = infoCriterion.longDescriptions?.[opt] ?? '';
+                  if (!shortLabel && !longDesc) return null;
+                  return (
+                    <div
+                      key={opt}
+                      className="px-7 py-3.5 transition-colors hover:bg-tusas-panel-hover"
+                    >
+                      <div className="flex gap-3.5">
                         <span
-                          className={`block text-[15px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold ${POPUP_BADGE[colorIdx]}`}
                         >
-                          {shortLabel}
+                          {opt}
                         </span>
-                        {longDesc && (
-                          <p className="mt-1 text-[13px] leading-relaxed text-tusas-muted">
-                            {longDesc}
-                          </p>
-                        )}
+                        <div className="min-w-0 -mt-px flex-1">
+                          <span
+                            className={`block text-[15px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
+                          >
+                            {shortLabel}
+                          </span>
+                          {longDesc && (
+                            <p className="mt-1 text-[13px] leading-relaxed text-tusas-muted">
+                              {longDesc}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
