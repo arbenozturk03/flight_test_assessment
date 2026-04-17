@@ -179,7 +179,9 @@ export default function MatrixEvaluation({
   const scalePopRef = useRef<HTMLDivElement>(null);
   const scaleOpen = activeCell != null;
 
-  const infoCriterion = infoOpen ? handlingCriteria.find((c) => c.id === infoOpen) : null;
+  const infoCriterion = infoOpen
+    ? handlingCriteria.find((c) => c.id === infoOpen) ?? phases.find((p) => p.id === infoOpen) ?? null
+    : null;
 
   const closeScale = useCallback(() => setActiveCell(null), []);
 
@@ -276,7 +278,22 @@ export default function MatrixEvaluation({
                         : 'bg-tusas-matrix-head text-tusas-muted'
                     }`}
                   >
-                    {phase.label}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>{phase.label}</span>
+                      {phase.longDescriptions && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInfoOpen(phase.id);
+                          }}
+                          className="text-blue-500 transition-colors hover:text-blue-400"
+                          title={`${phase.label} rating descriptions`}
+                        >
+                          <Info className="h-3.5 w-3.5" strokeWidth={2.5} />
+                        </button>
+                      )}
+                    </div>
                   </th>
                 );
               })}

@@ -183,10 +183,46 @@ export const HANDLING_CRITERIA: QualitativeCriterion[] = [
 
 /** Standard phase columns for matrix evaluation (all maneuvers) */
 const STANDARD_PHASE_CRITERIA: QualitativeCriterion[] = [
-  { id: 'initiation',  label: 'Initiation',  options: RATING_1_5, pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' } },
-  { id: 'capture',     label: 'Capture',     options: RATING_1_5, pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Underdamped', '4': 'Slow Damping', '5': 'Oscillatory' } },
-  { id: 'steadyState', label: 'Steady State', options: RATING_1_5, pdfLabels: { '1': 'Locked-in', '2': 'Solid', '3': 'Hesitant', '4': 'Unstable', '5': 'Demanding Workload' } },
-  { id: 'recovery',    label: 'Recovery',    options: RATING_1_5, pdfLabels: { '1': 'On-target', '2': 'Precise', '3': 'Undershoot', '4': 'Significant Error', '5': 'Overshoot' } },
+  { id: 'initiation', label: 'Initiation', options: RATING_1_5,
+    pdfLabels: { '1': 'Harmonious', '2': 'Crisp', '3': 'Light', '4': 'Sluggish', '5': 'Fatiguing' },
+    longDescriptions: {
+      '1': 'Control inputs applied at maneuver initiation are in perfect harmony with the aircraft\'s aerodynamic response. The aircraft perceives the command smoothly and without delay, responding in the correct proportion; the transition to the target maneuver is intuitive and effortless. No additional corrective action is needed from the pilot, and cognitive and physical workload is minimal.',
+      '2': 'The aircraft\'s initial response to control inputs is crisp, lively, and predictable. The link between input and response is distinct; the target maneuver initiates directly and decisively. The maneuver is triggered with low workload without the pilot needing to focus attention on the initiation phase.',
+      '3': 'Control forces at maneuver initiation are lighter than expected, which may create a slight tendency toward over-commanding. Although the aircraft responds adequately to commands, the pilot must consciously modulate input amplitude. Moderate pilot compensation is required to keep the initiation precise.',
+      '4': 'The aircraft\'s response to control inputs is noticeably slow and sluggish, with a perceptible delay between input and reaction. The pilot must apply significantly more input than expected to reach the target response rate. High pilot compensation and attention are required during the initiation phase.',
+      '5': 'Initiating the maneuver requires extreme physical force and sustained effort. The aircraft exhibits serious resistance to commands, and the pilot must apply fatiguing levels of muscular force to achieve the initiation motion. This creates an unacceptable level of workload that directly threatens task safety.',
+    },
+  },
+  { id: 'capture', label: 'Capture', options: RATING_1_5,
+    pdfLabels: { '1': 'Deadbeat', '2': 'Snappy', '3': 'Underdamped', '4': 'Slow Damping', '5': 'Oscillatory' },
+    longDescriptions: {
+      '1': 'When the target parameter is reached, the aircraft settles on the target value instantly and without overshoot, thanks to ideal damping. No oscillation, overshoot, or undershoot is observed. The pilot does not need to provide corrective input, and the capture phase is completed flawlessly with minimal workload.',
+      '2': 'The aircraft captures the target parameter quickly, decisively, and precisely. Dynamic response is sharp yet controlled; no fluctuation is observed beyond a very small overshoot on target. The capture occurs with high predictability and low workload from the pilot\'s perspective.',
+      '3': 'Brief, low-amplitude oscillations are observed while capturing the target parameter; the aircraft slightly overshoots the target before settling. The pilot must apply small counter-inputs to damp out these oscillations. Moderate pilot compensation is required.',
+      '4': 'Noticeable oscillations occur around the target value and take longer than normal to damp out. Maintaining the aircraft stable on the target value is difficult; the pilot must continuously and actively apply counter-inputs to suppress the fluctuations. This creates a high level of workload.',
+      '5': 'Attempting to capture the target results in undamped or progressively diverging oscillations. The aircraft cannot be reliably stabilized on the target value and persistently overshoots in both directions. The pilot must apply high-amplitude, aggressive counter-inputs to suppress the oscillations. This creates an unacceptable level of workload and risk of loss of control.',
+    },
+  },
+  { id: 'steadyState', label: 'Steady State', options: RATING_1_5,
+    pdfLabels: { '1': 'Locked-in', '2': 'Solid', '3': 'Hesitant', '4': 'Unstable', '5': 'Demanding Workload' },
+    longDescriptions: {
+      '1': 'The aircraft locks in at the target parameter with excellent stability. No deviation is observed in flight parameters; the aircraft is virtually fixed on the target value. The pilot does not need to provide any corrective input to maintain the target, and cognitive workload is minimal.',
+      '2': 'The aircraft exhibits high stability at the target parameter. Flight parameters can be reliably maintained; only rare and very small corrective inputs may be needed. The aircraft shows predictable aerodynamic behavior with low workload.',
+      '3': 'Maintaining the target value requires attention; small but persistent drift tendencies are observed. The pilot must actively apply small corrective inputs to stay at the target parameter. The task is achievable, but moderate pilot compensation is generated.',
+      '4': 'The aircraft exhibits clear instability at the target parameter. Persistent deviations occur and maintaining parameters becomes increasingly difficult. The pilot must apply frequent, firm, and noticeable corrective commands to hold the aircraft at the target value. The effort to maintain balance creates a high level of pilot compensation and workload.',
+      '5': 'Holding the aircraft at the target parameter is extremely challenging both physically and mentally. Significant and large deviations occur; the aircraft continuously tends to drift away from the target. The pilot must continuously apply broad, high-amplitude counter-commands to maintain balance. This creates an unacceptable level of workload.',
+    },
+  },
+  { id: 'recovery', label: 'Recovery', options: RATING_1_5,
+    pdfLabels: { '1': 'On-target', '2': 'Precise', '3': 'Undershoot', '4': 'Significant Error', '5': 'Overshoot' },
+    longDescriptions: {
+      '1': 'The recovery maneuver is executed flawlessly; the aircraft settles precisely on the target recovery parameter. No overshoot or undershoot is observed; the dynamic response damps out instantly. The pilot needs no corrective input, and workload is minimal.',
+      '2': 'The aircraft reaches the recovery value with high precision. The transition to the target state is clean and predictable. Only a single small corrective input may be needed to hold the target value precisely. The recovery is completed with low pilot workload.',
+      '3': 'During recovery, the aircraft shows a tendency to correct early toward the target value and tends to stop before fully seating on the target. The pilot must apply additional corrective input to seat the aircraft precisely on the desired recovery parameter. Moderate pilot compensation is required.',
+      '4': 'A noticeable and large deviation from the target value is observed during the recovery maneuver. Settling the aircraft on the target recovery parameter is difficult; the pilot must apply pronounced, repetitive, and sequential corrective commands. This instability creates a high level of pilot compensation and workload.',
+      '5': 'During recovery, the aircraft severely exceeds the target value and departs outward from the planned track. Returning the aircraft to the desired state becomes extremely difficult; the pilot must apply aggressive, broad-amplitude counter-commands. Dynamic control deficiency creates an unacceptable level of workload.',
+    },
+  },
 ];
 
 /** All maneuvers support the matrix evaluation (handling rows × phase columns). */
