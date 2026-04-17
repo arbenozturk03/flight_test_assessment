@@ -459,22 +459,23 @@ export default function MatrixEvaluation({
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-[700px] rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
+            className="relative flex max-h-[90vh] w-full max-w-[700px] flex-col rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-tusas-panel-border px-7 py-5">
+            <div className="flex shrink-0 items-center justify-between border-b border-tusas-panel-border px-7 py-4">
               <h3 className="text-xl font-semibold text-tusas-text">
                 {infoCriterion.label}
               </h3>
               <button
                 type="button"
                 onClick={() => setInfoOpen(null)}
-                className="text-tusas-muted transition-colors hover:text-tusas-text"
+                className="rounded-md p-1.5 text-tusas-muted transition-colors hover:bg-tusas-panel-hover hover:text-tusas-text"
+                aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="divide-y divide-tusas-panel-border">
+            <div className="flex-1 divide-y divide-tusas-panel-border overflow-y-auto">
               {['1', '2', '3', '4', '5'].map((opt, idx) => {
                 const colorIdx = Math.min(idx, 4);
                 const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
@@ -483,7 +484,7 @@ export default function MatrixEvaluation({
                 return (
                   <div
                     key={opt}
-                    className="px-7 py-4 transition-colors hover:bg-tusas-panel-hover"
+                    className="px-7 py-3.5 transition-colors hover:bg-tusas-panel-hover"
                   >
                     <div className="flex gap-3.5">
                       <span
@@ -498,7 +499,7 @@ export default function MatrixEvaluation({
                           {shortLabel}
                         </span>
                         {longDesc && (
-                          <p className="mt-0.5 text-[14px] leading-relaxed text-tusas-muted">
+                          <p className="mt-1 text-[13px] leading-relaxed text-tusas-muted">
                             {longDesc}
                           </p>
                         )}
