@@ -464,29 +464,29 @@ export default function MatrixEvaluation({
       {infoOpen && infoCriterion?.longDescriptions &&
         createPortal(
           <div
-            className="fixed inset-0 z-[1000]"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
             onClick={() => setInfoOpen(null)}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+            style={{ height: '100dvh' }}
           >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div
-              className="absolute left-1/2 top-1/2 flex w-[min(640px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
-              style={{ maxHeight: 'calc(100vh - 2rem)', height: 'auto' }}
+              className="relative z-10 flex w-full max-w-[560px] flex-col overflow-hidden rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
+              style={{ maxHeight: '100%' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                type="button"
-                onClick={() => setInfoOpen(null)}
-                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-tusas-panel-hover text-tusas-text shadow-lg ring-1 ring-tusas-panel-border transition-colors hover:bg-red-500/20 hover:text-red-400"
-                aria-label="Close"
-                title="Close (Esc)"
-              >
-                <X className="h-5 w-5" strokeWidth={2.5} />
-              </button>
-              <div className="shrink-0 border-b border-tusas-panel-border bg-tusas-panel px-5 py-3 pr-14">
-                <h3 className="text-lg font-semibold text-tusas-text">
+              <div className="relative flex shrink-0 items-center justify-between border-b border-tusas-panel-border bg-tusas-panel px-4 py-2.5">
+                <h3 className="truncate pr-2 text-base font-semibold text-tusas-text">
                   {infoCriterion.label}
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(null)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tusas-muted transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  aria-label="Close"
+                  title="Close (Esc)"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
               </div>
               <div className="min-h-0 flex-1 divide-y divide-tusas-panel-border overflow-y-auto overscroll-contain">
                 {['1', '2', '3', '4', '5'].map((opt, idx) => {
@@ -497,22 +497,22 @@ export default function MatrixEvaluation({
                   return (
                     <div
                       key={opt}
-                      className="px-5 py-2.5 transition-colors hover:bg-tusas-panel-hover"
+                      className="px-4 py-2 transition-colors hover:bg-tusas-panel-hover"
                     >
-                      <div className="flex gap-3">
+                      <div className="flex gap-2.5">
                         <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-bold ${POPUP_BADGE[colorIdx]}`}
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold ${POPUP_BADGE[colorIdx]}`}
                         >
                           {opt}
                         </span>
                         <div className="min-w-0 flex-1">
                           <span
-                            className={`block text-[13px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
+                            className={`block text-[12px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
                           >
                             {shortLabel}
                           </span>
                           {longDesc && (
-                            <p className="mt-1 text-[12px] leading-snug text-tusas-muted">
+                            <p className="mt-0.5 text-[11.5px] leading-snug text-tusas-muted">
                               {longDesc}
                             </p>
                           )}
