@@ -464,63 +464,62 @@ export default function MatrixEvaluation({
       {infoOpen && infoCriterion?.longDescriptions &&
         createPortal(
           <div
-            className="fixed inset-0 z-[1000] overflow-y-auto overscroll-contain"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-2"
             onClick={() => setInfoOpen(null)}
           >
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative flex min-h-full items-start justify-center p-3 sm:items-center sm:p-4">
-              <div
-                className="relative w-full max-w-[520px] rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-t-xl border-b border-tusas-panel-border bg-tusas-panel px-4 py-2">
-                  <h3 className="truncate text-sm font-semibold text-tusas-text">
-                    {infoCriterion.label}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setInfoOpen(null)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tusas-panel-hover text-tusas-text ring-1 ring-tusas-panel-border transition-colors hover:bg-red-500/20 hover:text-red-400"
-                    aria-label="Close"
-                    title="Close (Esc)"
-                  >
-                    <X className="h-4 w-4" strokeWidth={2.5} />
-                  </button>
-                </div>
-                <div className="divide-y divide-tusas-panel-border">
-                  {['1', '2', '3', '4', '5'].map((opt, idx) => {
-                    const colorIdx = Math.min(idx, 4);
-                    const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
-                    const longDesc = infoCriterion.longDescriptions?.[opt] ?? '';
-                    if (!shortLabel && !longDesc) return null;
-                    return (
-                      <div
-                        key={opt}
-                        className="px-3 py-1.5 transition-colors hover:bg-tusas-panel-hover"
-                      >
-                        <div className="flex gap-2">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative z-10 flex w-full max-w-[680px] flex-col overflow-hidden rounded-xl border border-tusas-panel-border bg-tusas-panel shadow-2xl"
+              style={{ maxHeight: 'calc(100vh - 1rem)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-tusas-panel-border bg-tusas-panel px-3 py-1.5">
+                <h3 className="truncate text-[13px] font-semibold text-tusas-text">
+                  {infoCriterion.label}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(null)}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-tusas-panel-hover text-tusas-text ring-1 ring-tusas-panel-border transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  aria-label="Close"
+                  title="Close (Esc)"
+                >
+                  <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 divide-y divide-tusas-panel-border overflow-y-auto overscroll-contain">
+                {['1', '2', '3', '4', '5'].map((opt, idx) => {
+                  const colorIdx = Math.min(idx, 4);
+                  const shortLabel = infoCriterion.pdfLabels?.[opt] ?? '';
+                  const longDesc = infoCriterion.longDescriptions?.[opt] ?? '';
+                  if (!shortLabel && !longDesc) return null;
+                  return (
+                    <div
+                      key={opt}
+                      className="px-3 py-1.5 transition-colors hover:bg-tusas-panel-hover"
+                    >
+                      <div className="flex gap-2">
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[10px] font-bold ${POPUP_BADGE[colorIdx]}`}
+                        >
+                          {opt}
+                        </span>
+                        <div className="min-w-0 flex-1">
                           <span
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[11px] font-bold ${POPUP_BADGE[colorIdx]}`}
+                            className={`text-[11px] font-semibold ${POPUP_LABEL[colorIdx]}`}
                           >
-                            {opt}
+                            {shortLabel}
                           </span>
-                          <div className="min-w-0 flex-1">
-                            <span
-                              className={`block text-[11.5px] font-semibold leading-tight ${POPUP_LABEL[colorIdx]}`}
-                            >
-                              {shortLabel}
+                          {longDesc && (
+                            <span className="ml-1.5 text-[10.5px] leading-[1.3] text-tusas-muted">
+                              {longDesc}
                             </span>
-                            {longDesc && (
-                              <p className="mt-0.5 text-[10.5px] leading-[1.35] text-tusas-muted">
-                                {longDesc}
-                              </p>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>,
