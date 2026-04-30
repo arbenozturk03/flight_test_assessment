@@ -25,6 +25,8 @@ interface ExportOptions {
   cancelled: number[];
   startTime: Date;
   endTime: Date;
+  /** Flight terminated early via "Abort & Save"; affects the output filename suffix. */
+  aborted?: boolean;
 }
 
 function fmtTime(d: Date): string {
@@ -64,14 +66,27 @@ export function exportToPdf({
   cancelled,
   startTime,
   endTime,
+  aborted = false,
 }: ExportOptions) {
   const allTps = Array.from({ length: testPointCount }, (_, i) => i + 1);
 
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yy = String(now.getFullYear()).slice(-2);
-  const filename = `Flight Test Assessment Form ${dd}.${mm}.${yy}.pdf`;
+  const dd = String(endTime.getDate()).padStart(2, '0');
+  const mm = String(endTime.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(endTime.getFullYear());
+  const yy = yyyy.slice(-2);
+  const flightToken =
+    String(flightTestNumber ?? '')
+      .trim()
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'FLT';
+  const statusToken = aborted ? 'ABORTED' : 'INT';
+  // Filename format: <FlightTestNo>_<dd.mm.yyyy>_<INT|ABORTED>.pdf
+  const filename = `${flightToken}_${dd}.${mm}.${yyyy}_${statusToken}.pdf`;
+
+  // When aborted, untouched/incomplete test points are treated as cancelled
+  // (so the report shows "C" instead of "N/A" for them).
+  const isCancelledTp = (tp: number): boolean =>
+    cancelled.includes(tp) || (aborted && !completed.includes(tp));
 
   const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -104,8 +119,10 @@ export function exportToPdf({
   doc.text(line2Parts.join('  |  '), margin, 14);
 
   const durationMs = endTime.getTime() - startTime.getTime();
+  const effectiveCancelledCount = allTps.filter((tp) => isCancelledTp(tp)).length;
+  const statusLine = aborted ? '  |  Status: ABORTED' : '';
   doc.text(
-    `Start: ${fmtTime(startTime)}  |  End: ${fmtTime(endTime)}  |  Duration: ${fmtDuration(durationMs)}  |  Completed: ${completed.length}  |  Cancelled: ${cancelled.length}`,
+    `Start: ${fmtTime(startTime)}  |  End: ${fmtTime(endTime)}  |  Duration: ${fmtDuration(durationMs)}  |  Completed: ${completed.length}  |  Cancelled: ${effectiveCancelledCount}${statusLine}`,
     margin,
     18,
   );
@@ -267,7 +284,7 @@ export function exportToPdf({
       }
 
       const tpData = evaluations[tp];
-      const isCancelled = cancelled.includes(tp);
+      const isCancelled = isCancelledTp(tp);
       const cancelledVal = 'C';
       const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
       const mn = tpData?.maneuver || null;
@@ -347,7 +364,7 @@ export function exportToPdf({
     classicTableOpen = false;
 
     const tpData = evaluations[tp];
-    const isCancelled = cancelled.includes(tp);
+    const isCancelled = isCancelledTp(tp);
     const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
     const maneuverName = tpData?.maneuver || null;
     const phases = getManeuverCriteria(maneuverName);
@@ -549,7 +566,7 @@ export function exportToPdf({
 
   allTps.forEach((tp) => {
     const tpData = evaluations[tp];
-    const isCancelled = cancelled.includes(tp);
+    const isCancelled = isCancelledTp(tp);
     const ev: Evaluation = tpData?.evaluation || createDefaultEvaluation();
     const maneuverName = tpData?.maneuver || 'N/A';
     const dynCriteria = getManeuverCriteria(tpData?.maneuver ?? null);

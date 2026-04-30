@@ -87,18 +87,68 @@ export default function ManeuverSetup({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <p className="text-tusas-muted">
-        {isEditingManeuvers
-          ? 'Edit the maneuvers for this flight test. Your progress is preserved.'
-          : 'Select the maneuvers to include in this flight test. You will choose from these maneuvers for each test point.'}
-      </p>
+      {isEditingManeuvers && (
+        <p className="text-tusas-muted">
+          Edit the maneuvers for this flight test. Your progress is preserved.
+        </p>
+      )}
 
-      {/* Upload test card image to auto-fill test points and maneuvers */}
+      {/* 1. Upload test card image to auto-fill flight number, TP count, and maneuvers */}
       {onApplyOCRResult && (
         <TestCardUpload onExtract={onApplyOCRResult} disabled={isEditingManeuvers} />
       )}
 
-      {/* FTE and TP selection – before maneuvers */}
+      {/* 2. Flight identifier: Flight Test No + total test point count (auto-filled by OCR) */}
+      <div className="flex flex-col gap-4 rounded-lg border border-tusas-border bg-tusas-surface p-4 sm:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <label
+            htmlFor="ftn"
+            className={`text-xs font-medium ${showErrors && invalidFlightTest ? 'text-red-600' : 'text-tusas-muted'}`}
+          >
+            Flight Test No
+          </label>
+          <input
+            id="ftn"
+            type="text"
+            value={flightTestNumber}
+            onChange={(e) => onFlightTestNumberChange(e.target.value)}
+            placeholder=""
+            className={`h-9 w-full rounded border px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue ${
+              showErrors && invalidFlightTest
+                ? 'border-red-600 bg-red-500/10'
+                : 'border-tusas-border bg-tusas-bg'
+            }`}
+          />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <label
+            htmlFor="tp"
+            className={`text-xs font-medium ${showErrors && invalidCount ? 'text-red-600' : 'text-tusas-muted'}`}
+          >
+            Total number of test points
+          </label>
+          <input
+            id="tp"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={testPointCount ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, '');
+              const v = raw ? parseInt(raw, 10) : null;
+              if (v == null || (v >= 1 && v <= 999)) onTestPointCountChange(v);
+            }}
+            placeholder=""
+            className={`h-9 w-full rounded border px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue ${
+              showErrors && invalidCount
+                ? 'border-red-600 bg-red-500/10'
+                : 'border-tusas-border bg-tusas-bg'
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* 3. FTE and TP selection – the only fields that always require manual input */}
       <div className="flex flex-col gap-4 rounded-lg border border-tusas-border bg-tusas-surface p-4 sm:flex-row">
         <MultiSelectDropdown
           label="FTE (Flight Test Engineer)"
@@ -130,59 +180,6 @@ export default function ManeuverSetup({
             onToggle={onToggle}
           />
         ))}
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <div aria-hidden />
-        <div aria-hidden />
-        <div className="flex min-w-0 flex-1 items-end gap-4 rounded-lg border border-tusas-border bg-tusas-surface p-4">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <label
-              htmlFor="ftn"
-              className={`text-xs font-medium ${showErrors && invalidFlightTest ? 'text-red-600' : 'text-tusas-muted'}`}
-            >
-              Flight Test No
-            </label>
-            <input
-              id="ftn"
-              type="text"
-              value={flightTestNumber}
-              onChange={(e) => onFlightTestNumberChange(e.target.value)}
-              placeholder=""
-              className={`h-9 w-full rounded border px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue ${
-                showErrors && invalidFlightTest
-                  ? 'border-red-600 bg-red-500/10'
-                  : 'border-tusas-border bg-tusas-bg'
-              }`}
-            />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <label
-              htmlFor="tp"
-              className={`text-xs font-medium ${showErrors && invalidCount ? 'text-red-600' : 'text-tusas-muted'}`}
-            >
-              Total number of test points
-            </label>
-            <input
-              id="tp"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={testPointCount ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/\D/g, '');
-                const v = raw ? parseInt(raw, 10) : null;
-                if (v == null || (v >= 1 && v <= 999)) onTestPointCountChange(v);
-              }}
-              placeholder=""
-              className={`h-9 w-full rounded border px-3 py-2 text-sm text-tusas-text placeholder-tusas-muted outline-none transition-colors focus:border-tusas-blue ${
-                showErrors && invalidCount
-                  ? 'border-red-600 bg-red-500/10'
-                  : 'border-tusas-border bg-tusas-bg'
-              }`}
-            />
-          </div>
-        </div>
       </div>
 
       {showErrors && excessManeuvers && (

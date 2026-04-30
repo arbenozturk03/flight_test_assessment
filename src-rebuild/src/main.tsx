@@ -7,6 +7,11 @@ import { ThemeProvider, applyStoredThemeClass } from './theme/ThemeContext';
 
 applyStoredThemeClass();
 
+// DOCS MODE — DO NOT PUSH. See index.css for details. Persists between reloads.
+if (typeof localStorage !== 'undefined' && localStorage.getItem('docsMode') === '1') {
+  document.documentElement.classList.add('docs-mode');
+}
+
 if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     for (const r of regs) r.unregister();

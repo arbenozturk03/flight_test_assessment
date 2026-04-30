@@ -92,3 +92,31 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * DOCS / SCREENSHOT MODE — DO NOT PUSH
+ *
+ * Enables larger, more legible fonts for screenshots used in the user manual.
+ * Only font sizes are increased; padding, gap, button height, and layout
+ * dimensions are kept untouched, so the whole form still fits in one shot.
+ *
+ * Toggle in browser DevTools console:
+ *   document.documentElement.classList.toggle('docs-mode')
+ *
+ * Or persist for the session:
+ *   localStorage.setItem('docsMode','1'); location.reload();
+ * Off:
+ *   localStorage.removeItem('docsMode'); location.reload();
+ *
+ * To remove this feature entirely: delete this whole block.
+ * ───────────────────────────────────────────────────────────────────────── */
+html.docs-mode .text-xs   { font-size: 1rem;     line-height: 1.2; }
+html.docs-mode .text-sm   { font-size: 1.125rem; line-height: 1.25; }
+html.docs-mode .text-base { font-size: 1.25rem;  line-height: 1.3; }
+html.docs-mode .text-lg   { font-size: 1.4rem;   line-height: 1.3; }
+html.docs-mode .text-xl   { font-size: 1.6rem;   line-height: 1.3; }
+html.docs-mode .text-2xl  { font-size: 1.85rem;  line-height: 1.3; }
+html.docs-mode input,
+html.docs-mode select,
+html.docs-mode textarea,
+html.docs-mode button { font-size: 1.05rem; }

@@ -103,6 +103,7 @@ export default function App() {
       cancelled,
       startTime: startTime ?? endTime,
       endTime,
+      aborted: false,
     });
   };
 
@@ -119,6 +120,7 @@ export default function App() {
       cancelled,
       startTime: startTime ?? endTime,
       endTime,
+      aborted: true,
     });
     setShowAbortConfirm(false);
     resetMission();
