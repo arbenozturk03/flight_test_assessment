@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Pencil,
   RefreshCw,
+  Undo2,
 } from 'lucide-react';
 import type { Evaluation, Evaluations, TestPointData } from '../types';
 import {
@@ -323,6 +324,12 @@ export default function TestEvaluation({
     onSelectTestPoint(next);
     if (!next) onShowSummaryChange(true);
     scrollToTop();
+  };
+
+  // Undo a cancellation – brings the test point back into evaluation mode while
+  // preserving any data already entered before the (possibly accidental) cancel.
+  const restoreTestPoint = () => {
+    emitUpdate({ cancelled: false });
   };
 
   const completeAndNext = () => {
@@ -734,6 +741,17 @@ export default function TestEvaluation({
                 <p className="font-semibold text-tusas-red">
                   This test point has been cancelled.
                 </p>
+                <p className="mt-1 text-sm text-tusas-muted">
+                  Pressed by mistake? You can restore it and continue evaluating.
+                </p>
+                <button
+                  type="button"
+                  onClick={restoreTestPoint}
+                  className="mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-tusas-red bg-tusas-surface px-5 py-2 text-sm font-semibold text-tusas-red transition-colors hover:bg-tusas-red/10"
+                >
+                  <Undo2 className="h-4 w-4" />
+                  Restore Test Point
+                </button>
               </div>
             )}
           </div>

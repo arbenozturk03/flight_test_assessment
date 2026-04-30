@@ -86,7 +86,11 @@ export default function App() {
       setCompleted((prev) => (prev.includes(tp) ? prev : [...prev, tp]));
       setCancelled((prev) => prev.filter((x) => x !== tp));
     } else {
+      // data.cancelled === false but eval is incomplete: TP returns to
+      // "in progress" state (e.g. user restored a cancelled TP). Make sure
+      // it is removed from BOTH lists so the sidebar shows it as pending.
       setCompleted((prev) => prev.filter((x) => x !== tp));
+      setCancelled((prev) => prev.filter((x) => x !== tp));
     }
   };
 
