@@ -15,18 +15,18 @@ type Step = 1 | 2;
  * Boots the app straight into the evaluation screen with a small preset
  * flight so visitors can try out the rating UI via a QR code, without
  * having to go through the setup screen. Does NOT affect the normal flow.
+ *
+ * Currently focused on the BACH (Bank Angle Capture and Hold) maneuver:
+ * a single maneuver in the pool and a few test points already assigned
+ * to BACH, so visitors only need to fill in ratings & comments and can
+ * generate a real PDF at the end.
  */
 const DEMO_PRESET = {
   flightTestNumber: 'FLT-DEMO',
   ftes: ['Caner Korkmaz'],
   tps: ['A.Y. Barbaros Demirbaş'],
-  maneuvers: [
-    'Pitch Doublet',
-    'Roll Doublet',
-    'Steady Heading Sideslip',
-    'Coordinated Turn',
-  ],
-  testPointCount: 4,
+  maneuvers: ['Bank Angle Capture and Hold'],
+  testPointCount: 3,
 } as const;
 
 const isDemoMode = (): boolean => {
@@ -146,12 +146,6 @@ export default function App() {
   };
 
   const handleFinish = () => {
-    if (demoMode) {
-      window.alert(
-        'Demo Mode: PDF download is disabled. In normal use, a Flight Test Assessment PDF would be generated here.',
-      );
-      return;
-    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -169,11 +163,6 @@ export default function App() {
   };
 
   const handleAbortAndSave = () => {
-    if (demoMode) {
-      window.alert('Demo Mode: PDF download is disabled.');
-      setShowAbortConfirm(false);
-      return;
-    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -233,7 +222,7 @@ export default function App() {
             {demoMode && (
               <span
                 className="rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
-                title="Demo mode: data is preset and PDF download is disabled"
+                title="Demo mode: preset flight (BACH only). Rate the test points and generate a PDF when done."
               >
                 Demo
               </span>
