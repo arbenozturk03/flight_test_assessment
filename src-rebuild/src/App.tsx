@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Moon, RotateCcw, Sun, XCircle } from 'lucide-react';
 import { useTheme } from './theme/ThemeContext';
 import type { Evaluations, TestPointData } from './types';
@@ -9,6 +9,30 @@ import ManeuverSetup from './components/ManeuverSetup';
 import TestEvaluation from './components/TestEvaluation';
 
 type Step = 1 | 2;
+
+/**
+ * Demo mode (`?demo=1` query param) — used for symposium / live demos.
+ * Boots the app straight into the evaluation screen with a small preset
+ * flight so visitors can try out the rating UI via a QR code, without
+ * having to go through the setup screen. Does NOT affect the normal flow.
+ */
+const DEMO_PRESET = {
+  flightTestNumber: 'FLT-DEMO',
+  ftes: ['Caner Korkmaz'],
+  tps: ['A.Y. Barbaros Demirbaş'],
+  maneuvers: [
+    'Pitch Doublet',
+    'Roll Doublet',
+    'Steady Heading Sideslip',
+    'Coordinated Turn',
+  ],
+  testPointCount: 4,
+} as const;
+
+const isDemoMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('demo') === '1';
+};
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -27,6 +51,33 @@ export default function App() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [initialManeuversFromOCR, setInitialManeuversFromOCR] = useState<Record<number, string> | null>(null);
   const [showAbortConfirm, setShowAbortConfirm] = useState(false);
+  const [demoMode] = useState<boolean>(() => isDemoMode());
+
+  // Apply the demo preset on first mount when `?demo=1` is present.
+  // This bypasses the setup screen and drops visitors directly into the
+  // evaluation UI so they can interact with it without any configuration.
+  useEffect(() => {
+    if (!demoMode) return;
+    const prefill: Evaluations = {};
+    for (let tp = 1; tp <= DEMO_PRESET.testPointCount; tp++) {
+      prefill[tp] = {
+        maneuver: DEMO_PRESET.maneuvers[(tp - 1) % DEMO_PRESET.maneuvers.length],
+        evaluation: createDefaultEvaluation(),
+        cancelled: false,
+        comments: {},
+        generalComment: '',
+      };
+    }
+    setFlightTestNumber(DEMO_PRESET.flightTestNumber);
+    setSelectedFTEs([...DEMO_PRESET.ftes]);
+    setSelectedTPs([...DEMO_PRESET.tps]);
+    setSelectedManeuvers([...DEMO_PRESET.maneuvers]);
+    setTestPointCount(DEMO_PRESET.testPointCount);
+    setEvaluations(prefill);
+    setCurrentTestPoint(1);
+    setStartTime(new Date());
+    setStep(2);
+  }, [demoMode]);
 
   const toggleManeuver = (name: string) => {
     setSelectedManeuvers((prev) =>
@@ -95,6 +146,12 @@ export default function App() {
   };
 
   const handleFinish = () => {
+    if (demoMode) {
+      window.alert(
+        'Demo Mode: PDF download is disabled. In normal use, a Flight Test Assessment PDF would be generated here.',
+      );
+      return;
+    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -112,6 +169,11 @@ export default function App() {
   };
 
   const handleAbortAndSave = () => {
+    if (demoMode) {
+      window.alert('Demo Mode: PDF download is disabled.');
+      setShowAbortConfirm(false);
+      return;
+    }
     const endTime = new Date();
     exportToPdf({
       flightTestNumber,
@@ -131,6 +193,12 @@ export default function App() {
   };
 
   const resetMission = () => {
+    // In demo mode the user should never see the setup screen; reloading
+    // re-applies the demo preset and gives them a fresh evaluation board.
+    if (demoMode) {
+      window.location.reload();
+      return;
+    }
     setStep(1);
     setFlightTestNumber('');
     setSelectedFTEs([]);
@@ -162,6 +230,14 @@ export default function App() {
             <span className="font-semibold text-tusas-text">
               Flight Test Assessment
             </span>
+            {demoMode && (
+              <span
+                className="rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
+                title="Demo mode: data is preset and PDF download is disabled"
+              >
+                Demo
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -252,7 +328,7 @@ export default function App() {
             completed={completed}
             cancelled={cancelled}
             onFinish={handleFinish}
-            onEditManeuvers={editManeuvers}
+            onEditManeuvers={demoMode ? undefined : editManeuvers}
             showSummary={showSummary}
             onShowSummaryChange={setShowSummary}
             startTime={startTime}

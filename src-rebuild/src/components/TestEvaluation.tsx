@@ -188,7 +188,8 @@ interface TestEvaluationProps {
   completed: number[];
   cancelled: number[];
   onFinish: () => void;
-  onEditManeuvers: () => void;
+  /** When omitted, the "Edit Maneuvers" button is hidden (e.g. in demo mode). */
+  onEditManeuvers?: () => void;
   showSummary: boolean;
   onShowSummaryChange: (v: boolean) => void;
   startTime: Date | null;
@@ -372,15 +373,17 @@ export default function TestEvaluation({
         )}
         <div className="mb-3 flex flex-col gap-1.5">
           <h2 className="text-sm font-semibold text-tusas-text">Test Points</h2>
-          <button
-            type="button"
-            onClick={onEditManeuvers}
-            className="flex min-h-[32px] items-center justify-center gap-1 rounded-lg border border-tusas-border px-2 py-1 text-xs text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
-            title="Edit Maneuvers"
-          >
-            <Pencil className="h-3 w-3" />
-            Edit Maneuvers
-          </button>
+          {onEditManeuvers && (
+            <button
+              type="button"
+              onClick={onEditManeuvers}
+              className="flex min-h-[32px] items-center justify-center gap-1 rounded-lg border border-tusas-border px-2 py-1 text-xs text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+              title="Edit Maneuvers"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit Maneuvers
+            </button>
+          )}
         </div>
 
         <nav className="space-y-0.5">
