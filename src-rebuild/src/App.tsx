@@ -23,7 +23,7 @@ type Step = 1 | 2;
  */
 const DEMO_PRESET = {
   flightTestNumber: 'FLT-DEMO',
-  ftes: ['Caner Korkmaz'],
+  ftes: ['Süleyman Murat Köroğlu'],
   tps: ['A.Y. Barbaros Demirbaş'],
   maneuvers: ['Bank Angle Capture and Hold'],
   testPointCount: 3,
