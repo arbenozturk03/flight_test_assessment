@@ -79,6 +79,29 @@ export default function App() {
     setStep(2);
   }, [demoMode]);
 
+  // When the demo URL is opened on a narrow device (phone), force the
+  // viewport to render at an iPad-like virtual width so the entire UI
+  // is scaled down to fit. The desktop/iPad layout itself is untouched;
+  // the browser just zooms it out as if the user used Safari's "Smaller
+  // text" (aA) control. Outside demo mode the viewport behaves normally.
+  useEffect(() => {
+    if (!demoMode || typeof document === 'undefined') return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    const original = meta.getAttribute('content') ?? '';
+    const isNarrow =
+      typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isNarrow) {
+      // 1100px renders the layout at iPad-Pro-portrait dimensions and lets
+      // the phone scale it down. Adjust if the visitor base prefers a
+      // different default zoom level.
+      meta.setAttribute('content', 'width=1100, viewport-fit=cover');
+    }
+    return () => {
+      meta.setAttribute('content', original);
+    };
+  }, [demoMode]);
+
   const toggleManeuver = (name: string) => {
     setSelectedManeuvers((prev) =>
       prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name],
@@ -214,15 +237,14 @@ export default function App() {
       {/* Header */}
       <header className="relative z-50 shrink-0 min-w-0 border-b border-tusas-border bg-tusas-bg px-4 py-3">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-3">
             <TusasLogo className="h-9 w-auto shrink-0" />
-            <span className="truncate font-semibold text-tusas-text">
-              <span className="hidden sm:inline">Flight Test Assessment</span>
-              <span className="sm:hidden">FTA</span>
+            <span className="font-semibold text-tusas-text">
+              Flight Test Assessment
             </span>
             {demoMode && (
               <span
-                className="shrink-0 rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
+                className="rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
                 title="Demo mode: preset flight (BACH only). Rate the test points and generate a PDF when done."
               >
                 Demo
@@ -251,20 +273,18 @@ export default function App() {
                 <button
                   type="button"
                   onClick={resetMission}
-                  title="Reset Mission"
-                  className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg border border-tusas-border px-2 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text sm:px-4"
+                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  <span className="hidden sm:inline">Reset Mission</span>
+                  Reset Mission
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAbortConfirm(true)}
-                  title="Abort & Save"
-                  className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-2 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 sm:px-4"
+                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
                 >
                   <XCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Abort &amp; Save</span>
+                  Abort &amp; Save
                 </button>
               </>
             )}

@@ -362,29 +362,16 @@ export default function TestEvaluation({
   );
 
   return (
-    <div className="flex h-full w-full max-w-[100vw] flex-col overflow-x-hidden md:flex-row">
-      {/*
-        Sidebar — desktop/iPad keeps the vertical sidebar look, mobile collapses
-        it into a sticky horizontal strip that scrolls left-to-right. All
-        sidebar features remain reachable; layout switches at the `md` (768px)
-        breakpoint so the existing iPad/desktop experience is untouched.
-      */}
-      <aside
-        className="
-          flex shrink-0 flex-row items-center gap-2 overflow-x-auto
-          border-b border-tusas-border bg-tusas-surface p-2
-          md:w-44 md:min-w-[11rem] md:flex-col md:items-stretch md:gap-0
-          md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r
-          md:p-3 md:min-h-0
-        "
-      >
+    <div className="flex h-full w-full max-w-[100vw] flex-row overflow-x-hidden">
+      {/* Sidebar */}
+      <aside className="w-44 min-w-[11rem] shrink-0 border-r border-tusas-border bg-tusas-surface p-3 overflow-y-auto min-h-0">
         {startTime && (
-          <div className="shrink-0 rounded-lg border border-tusas-border bg-tusas-bg px-3 py-1.5 md:mb-3 md:py-2">
-            <p className="hidden text-[10px] font-medium text-tusas-muted md:block">Flight Time</p>
-            <p className="font-mono text-sm font-bold tabular-nums text-tusas-text md:text-base">{chrono}</p>
+          <div className="mb-3 rounded-lg border border-tusas-border bg-tusas-bg px-3 py-2">
+            <p className="text-[10px] font-medium text-tusas-muted">Flight Time</p>
+            <p className="font-mono text-base font-bold tabular-nums text-tusas-text">{chrono}</p>
           </div>
         )}
-        <div className="hidden md:mb-3 md:flex md:flex-col md:gap-1.5">
+        <div className="mb-3 flex flex-col gap-1.5">
           <h2 className="text-sm font-semibold text-tusas-text">Test Points</h2>
           {onEditManeuvers && (
             <button
@@ -399,7 +386,7 @@ export default function TestEvaluation({
           )}
         </div>
 
-        <nav className="flex shrink-0 flex-row gap-1 md:flex-col md:gap-0 md:space-y-0.5">
+        <nav className="space-y-0.5">
           {allDone && (
             <button
               type="button"
@@ -407,7 +394,7 @@ export default function TestEvaluation({
                 onShowSummaryChange(true);
                 onSelectTestPoint(null);
               }}
-              className={`flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-xs transition-all md:min-h-[36px] md:w-full md:justify-start md:text-left ${
+              className={`flex w-full min-h-[36px] items-center gap-1.5 rounded-lg border-2 px-2 py-1.5 text-left text-xs transition-all ${
                 showSummary ? ACTIVE : 'border-transparent text-tusas-text hover:bg-tusas-bg'
               }`}
             >
@@ -424,7 +411,7 @@ export default function TestEvaluation({
                 onSelectTestPoint(tp);
                 onShowSummaryChange(false);
               }}
-              className={`flex min-h-[40px] shrink-0 items-center justify-center gap-1 rounded-lg border-2 px-3 py-1.5 text-xs transition-all md:min-h-[36px] md:w-full md:justify-between md:text-left ${
+              className={`flex w-full min-h-[36px] items-center justify-between gap-1 rounded-lg border-2 px-2 py-1.5 text-left text-xs transition-all ${
                 currentTestPoint === tp
                   ? ACTIVE
                   : 'border-transparent text-tusas-text hover:bg-tusas-bg'
@@ -444,13 +431,8 @@ export default function TestEvaluation({
           ))}
         </nav>
 
-        {/*
-          "Not evaluated" warning and Finish Test button — only on the
-          desktop sidebar. On mobile they are rendered at the bottom of the
-          main content area instead, so the top strip stays short.
-        */}
         {!allDone && unevaluated.length > 0 && (
-          <div className="mt-3 hidden rounded-lg border-2 border-amber-600 bg-amber-500/10 p-2 md:block">
+          <div className="mt-3 rounded-lg border-2 border-amber-600 bg-amber-500/10 p-2">
             <p className="text-[10px] font-semibold text-amber-600">
               Not evaluated:
             </p>
@@ -464,11 +446,10 @@ export default function TestEvaluation({
           <button
             type="button"
             onClick={handleFinish}
-            className="ml-auto flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-green-600 px-3 text-xs font-semibold text-white transition-all hover:bg-green-500 md:ml-0 md:mt-4 md:w-full md:px-0"
+            className="mt-4 flex w-full min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-green-600 text-xs font-semibold text-white transition-all hover:bg-green-500"
           >
             <Download className="h-4 w-4" />
-            <span className="hidden md:inline">Finish Test</span>
-            <span className="md:hidden">Finish</span>
+            Finish Test
           </button>
         )}
       </aside>
@@ -484,16 +465,6 @@ export default function TestEvaluation({
           />
         ) : currentTestPoint ? (
           <div className="mx-auto min-w-0 max-w-6xl space-y-8">
-            {/* Mobile-only: "Not evaluated" warning (desktop shows it in the sidebar). */}
-            {!allDone && unevaluated.length > 0 && (
-              <div className="rounded-lg border-2 border-amber-600 bg-amber-500/10 p-2 md:hidden">
-                <p className="text-[10px] font-semibold text-amber-600">Not evaluated:</p>
-                <p className="mt-0.5 text-[11px] font-medium text-tusas-text">
-                  {unevaluated.join(', ')}
-                </p>
-              </div>
-            )}
-
             {/* Header */}
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-[#003366] bg-[#003366] text-lg font-bold text-white">
