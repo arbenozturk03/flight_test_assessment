@@ -214,14 +214,15 @@ export default function App() {
       {/* Header */}
       <header className="relative z-50 shrink-0 min-w-0 border-b border-tusas-border bg-tusas-bg px-4 py-3">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <TusasLogo className="h-9 w-auto shrink-0" />
-            <span className="font-semibold text-tusas-text">
-              Flight Test Assessment
+            <span className="truncate font-semibold text-tusas-text">
+              <span className="hidden sm:inline">Flight Test Assessment</span>
+              <span className="sm:hidden">FTA</span>
             </span>
             {demoMode && (
               <span
-                className="rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
+                className="shrink-0 rounded-full border border-amber-500/60 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-500"
                 title="Demo mode: preset flight (BACH only). Rate the test points and generate a PDF when done."
               >
                 Demo
@@ -250,18 +251,20 @@ export default function App() {
                 <button
                   type="button"
                   onClick={resetMission}
-                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-tusas-border px-4 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text"
+                  title="Reset Mission"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg border border-tusas-border px-2 py-2 text-sm text-tusas-muted transition-colors hover:bg-tusas-bg hover:text-tusas-text sm:px-4"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Reset Mission
+                  <span className="hidden sm:inline">Reset Mission</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAbortConfirm(true)}
-                  className="flex min-h-[44px] items-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+                  title="Abort & Save"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg border border-red-600/50 bg-red-500/10 px-2 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 sm:px-4"
                 >
                   <XCircle className="h-4 w-4" />
-                  Abort &amp; Save
+                  <span className="hidden sm:inline">Abort &amp; Save</span>
                 </button>
               </>
             )}
